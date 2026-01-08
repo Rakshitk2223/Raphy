@@ -4,19 +4,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-btn');
     const stopBtn = document.getElementById('stop-btn');
     const clearBtn = document.getElementById('clear-btn');
-    const voiceBtn = document.getElementById('voice-btn');
     const muteBtn = document.getElementById('mute-btn');
     const statusIndicator = document.getElementById('status-indicator');
     const statusText = document.getElementById('status-text');
     const voiceStatus = document.getElementById('voice-status');
+    const orbWrapper = document.getElementById('orb-wrapper');
     const orbElement = document.getElementById('orb');
+    const orbHint = document.getElementById('orb-hint');
 
     const orb = new OrbController(orbElement);
     let currentAssistantMessage = null;
     let isProcessing = false;
     let isMuted = true;
     let isRecording = false;
-    let voiceOutputEnabled = false;
+    let isSpeaking = false;
+    let hasUsedVoice = false;
 
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const wsUrl = `ws://${window.location.host}/ws/${clientId}`;
@@ -40,14 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         onStart: (data) => {
             isProcessing = true;
-            updateButtons();
+            updateUI();
             orb.setThinking();
             currentAssistantMessage = createMessage('assistant');
             messagesContainer.appendChild(currentAssistantMessage);
             scrollToBottom();
         },
         onChunk: (content) => {
-            orb.setSpeaking();
             if (currentAssistantMessage) {
                 appendToMessage(currentAssistantMessage, content);
                 scrollToBottom();
@@ -55,11 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         onEnd: (stopped) => {
             isProcessing = false;
-            updateButtons();
+            isSpeaking = false;
+            updateUI();
             if (currentAssistantMessage) {
                 finishMessage(currentAssistantMessage, stopped);
             }
             currentAssistantMessage = null;
+            orb.setIdle();
             scrollToBottom();
         },
         onSystem: (content) => {
@@ -74,34 +77,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'listening':
                     orb.setListening();
                     isRecording = true;
-                    voiceBtn.classList.add('recording');
-                    showVoiceStatus('Listening...', 0);
+                    isSpeaking = false;
+                    showVoiceStatus('Listening...', 0, 'listening');
+                    hideOrbHint();
                     break;
                 case 'processing':
                     orb.setThinking();
+                    isRecording = false;
                     showVoiceStatus('Processing speech...', 0);
                     break;
                 case 'speaking':
                     orb.setSpeaking();
+                    isSpeaking = true;
+                    isRecording = false;
                     showVoiceStatus('Speaking...', 0);
                     break;
                 case 'muted':
                     orb.setIdle();
+                    isRecording = false;
+                    isSpeaking = false;
                     hideVoiceStatus();
                     break;
                 case 'idle':
                 default:
-                    orb.setIdle();
+                    if (!isProcessing) {
+                        orb.setIdle();
+                    }
                     isRecording = false;
-                    voiceBtn.classList.remove('recording');
+                    isSpeaking = false;
                     hideVoiceStatus();
                     break;
             }
-            updateButtons();
+            updateUI();
         },
         onTranscription: (text) => {
             addUserMessage(text);
-            showVoiceStatus('Transcribed: ' + text.substring(0, 30) + (text.length > 30 ? '...' : ''));
+            showVoiceStatus('Transcribed: ' + text.substring(0, 30) + (text.length > 30 ? '...' : ''), 2000);
         },
     });
 
@@ -188,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    function updateButtons() {
+    function updateUI() {
         sendBtn.disabled = !messageInput.value.trim() || isProcessing || !ws.isConnected();
         
         if (isProcessing) {
@@ -199,29 +210,45 @@ document.addEventListener('DOMContentLoaded', () => {
             stopBtn.classList.add('hidden');
         }
 
-        voiceBtn.disabled = isMuted || isProcessing;
+        muteBtn.classList.toggle('muted', isMuted);
+        muteBtn.classList.toggle('unmuted', !isMuted);
+        muteBtn.title = isMuted ? 'Click to enable voice' : 'Click to mute';
     }
 
-    function sendMessage(speak = false) {
+    function sendMessage() {
         const content = messageInput.value.trim();
         if (!content || isProcessing || !ws.isConnected()) return;
 
         addUserMessage(content);
-        ws.sendMessage(content, speak);
+        ws.sendMessage(content, !isMuted);
         messageInput.value = '';
         messageInput.style.height = 'auto';
-        updateButtons();
+        updateUI();
     }
 
     function stopGeneration() {
-        if (isProcessing) {
+        if (isProcessing || isSpeaking) {
             ws.stopGeneration();
+            isSpeaking = false;
+            orb.setIdle();
         }
     }
 
-    function toggleVoiceRecording() {
+    function handleOrbClick() {
+        orb.pulse();
+
+        if (isSpeaking) {
+            stopGeneration();
+            return;
+        }
+
+        if (isProcessing) {
+            stopGeneration();
+            return;
+        }
+
         if (isMuted) {
-            showVoiceStatus('Unmute microphone first');
+            showVoiceStatus('Unmute first (click speaker icon)', 2000, 'error');
             return;
         }
 
@@ -229,72 +256,40 @@ document.addEventListener('DOMContentLoaded', () => {
             ws.stopVoice();
         } else {
             ws.startVoice();
+            if (!hasUsedVoice) {
+                hasUsedVoice = true;
+            }
         }
     }
 
-    messageInput.addEventListener('input', () => {
-        updateButtons();
-        messageInput.style.height = 'auto';
-        messageInput.style.height = Math.min(messageInput.scrollHeight, 150) + 'px';
-    });
-
-    messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
-            e.preventDefault();
-            sendMessage(voiceOutputEnabled);
-        }
-        if (e.key === 'Enter' && e.altKey) {
-            e.preventDefault();
-            toggleVoiceRecording();
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (isProcessing) {
-                stopGeneration();
-            } else if (isRecording) {
-                ws.cancelVoice();
-            }
-        }
-    });
-
-    sendBtn.addEventListener('click', () => sendMessage(voiceOutputEnabled));
-    stopBtn.addEventListener('click', stopGeneration);
-
-    clearBtn.addEventListener('click', () => {
-        if (confirm('Clear conversation history?')) {
-            ws.clearHistory();
-            messagesContainer.innerHTML = '';
-            const welcomeMessage = createMessage('assistant');
-            const content = welcomeMessage.querySelector('p');
-            content.innerHTML = 'Hello! I\'m Raphael, your personal AI assistant. How can I help you today?';
-            messagesContainer.appendChild(welcomeMessage);
-        }
-    });
-
-    voiceBtn.addEventListener('click', toggleVoiceRecording);
-
-    muteBtn.addEventListener('click', () => {
+    function toggleMute() {
         isMuted = !isMuted;
-        muteBtn.classList.toggle('muted', isMuted);
-        muteBtn.title = isMuted ? 'Microphone muted (click to enable)' : 'Microphone active (click to mute)';
         ws.setMuted(isMuted);
         
         if (isMuted) {
-            showVoiceStatus('Microphone muted');
+            showVoiceStatus('Muted', 1500);
             if (isRecording) {
                 ws.cancelVoice();
             }
         } else {
-            showVoiceStatus('Microphone enabled - use Left Alt+Enter or click mic');
+            showVoiceStatus('Voice enabled - click orb to speak', 2000);
         }
-        updateButtons();
-    });
+        updateUI();
+    }
 
-    function showVoiceStatus(text, duration = 2000) {
+    function hideOrbHint() {
+        if (!hasUsedVoice) {
+            hasUsedVoice = true;
+            orbHint.classList.add('hidden');
+        }
+    }
+
+    function showVoiceStatus(text, duration = 2000, type = '') {
         voiceStatus.textContent = text;
-        voiceStatus.classList.add('visible');
+        voiceStatus.className = 'voice-status visible';
+        if (type) {
+            voiceStatus.classList.add(type);
+        }
         if (duration > 0) {
             setTimeout(() => {
                 voiceStatus.classList.remove('visible');
@@ -306,6 +301,55 @@ document.addEventListener('DOMContentLoaded', () => {
         voiceStatus.classList.remove('visible');
     }
 
+    messageInput.addEventListener('input', () => {
+        updateUI();
+        messageInput.style.height = 'auto';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 150) + 'px';
+    });
+
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Alt' && e.location === 1 && e.code === 'AltLeft') {
+            return;
+        }
+        
+        if (e.altKey && e.key === 'Enter') {
+            e.preventDefault();
+            handleOrbClick();
+        }
+
+        if (e.key === 'Escape') {
+            if (isProcessing || isSpeaking) {
+                stopGeneration();
+            } else if (isRecording) {
+                ws.cancelVoice();
+                showVoiceStatus('Cancelled', 1500);
+            }
+        }
+    });
+
+    orbWrapper.addEventListener('click', handleOrbClick);
+    sendBtn.addEventListener('click', sendMessage);
+    stopBtn.addEventListener('click', stopGeneration);
+    muteBtn.addEventListener('click', toggleMute);
+
+    clearBtn.addEventListener('click', () => {
+        if (confirm('Clear conversation history?')) {
+            ws.clearHistory();
+            messagesContainer.innerHTML = '';
+            const welcomeMessage = createMessage('assistant');
+            const content = welcomeMessage.querySelector('p');
+            content.innerHTML = "Hello! I'm Raphael, your personal AI assistant. Click the orb above to speak, or type below.";
+            messagesContainer.appendChild(welcomeMessage);
+        }
+    });
+
     muteBtn.classList.add('muted');
-    updateButtons();
+    updateUI();
 });

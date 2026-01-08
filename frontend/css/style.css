@@ -14,7 +14,7 @@
     --border: rgba(255, 255, 255, 0.08);
     --message-user: #1e1e2e;
     --message-assistant: transparent;
-    --orb-height: 140px;
+    --orb-height: 160px;
 }
 
 * {
@@ -82,11 +82,11 @@ body {
     gap: 1rem;
 }
 
-.header-btn {
-    width: 36px;
-    height: 36px;
+.mute-btn {
+    width: 40px;
+    height: 40px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--bg-tertiary);
     color: var(--text-muted);
     cursor: pointer;
@@ -96,27 +96,26 @@ body {
     transition: all 0.2s ease;
 }
 
-.header-btn:hover {
+.mute-btn:hover {
     background: var(--bg-primary);
-    color: var(--text-primary);
 }
 
-.header-btn.active {
-    background: var(--success);
-    color: white;
-}
-
-.header-btn.muted {
-    color: var(--error);
-}
-
-.header-btn .mute-line {
+.mute-btn .icon-unmuted {
     display: none;
 }
 
-.header-btn.muted .mute-line {
+.mute-btn .icon-muted {
     display: block;
-    stroke: var(--error);
+    color: var(--error);
+}
+
+.mute-btn:not(.muted) .icon-muted {
+    display: none;
+}
+
+.mute-btn:not(.muted) .icon-unmuted {
+    display: block;
+    color: var(--success);
 }
 
 .header-status {
@@ -165,6 +164,7 @@ body {
     border-bottom: 1px solid var(--border);
     position: relative;
     overflow: hidden;
+    gap: 0.5rem;
 }
 
 .orb-section::before {
@@ -178,13 +178,40 @@ body {
     pointer-events: none;
 }
 
+.orb-wrapper {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    z-index: 1;
+}
+
+.orb-wrapper:hover {
+    transform: scale(1.05);
+}
+
+.orb-wrapper:active {
+    transform: scale(0.98);
+}
+
+.orb-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: opacity 0.5s ease;
+    z-index: 1;
+}
+
+.orb-hint.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 .voice-status {
     position: absolute;
     bottom: 8px;
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: var(--accent-secondary);
     opacity: 0;
     transition: opacity 0.2s ease;
+    z-index: 1;
 }
 
 .voice-status.visible {
@@ -193,6 +220,10 @@ body {
 
 .voice-status.listening {
     color: var(--success);
+}
+
+.voice-status.error {
+    color: var(--error);
 }
 
 .chat-container {
@@ -354,27 +385,6 @@ body {
 .clear-btn:hover {
     background: var(--bg-secondary);
     color: var(--error);
-}
-
-.voice-btn {
-    background: transparent;
-    color: var(--text-muted);
-}
-
-.voice-btn:hover {
-    background: var(--bg-secondary);
-    color: var(--success);
-}
-
-.voice-btn.recording {
-    background: var(--success);
-    color: white;
-    animation: pulse-recording 1s ease-in-out infinite;
-}
-
-@keyframes pulse-recording {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
 }
 
 .stop-btn {

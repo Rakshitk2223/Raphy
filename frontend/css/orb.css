@@ -328,3 +328,34 @@
     0%, 100% { transform: scale(1); }
     50% { transform: scale(0.95); }
 }
+
+.orb.clicked .orb-core {
+    animation: coreClicked 0.3s ease-out;
+}
+
+@keyframes coreClicked {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.orb.listening .orb-core {
+    animation: coreListening 1s ease-in-out infinite;
+}
+
+@keyframes coreListening {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 
+            0 0 20px rgba(16, 185, 129, 0.8),
+            0 0 40px rgba(5, 150, 105, 0.6),
+            0 0 60px rgba(4, 120, 87, 0.4);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 
+            0 0 30px rgba(16, 185, 129, 1),
+            0 0 60px rgba(5, 150, 105, 0.8),
+            0 0 90px rgba(4, 120, 87, 0.5);
+    }
+}

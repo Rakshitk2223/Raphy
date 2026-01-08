@@ -18,13 +18,15 @@
                 <h1>Raphael</h1>
             </div>
             <div class="header-controls">
-                <button class="header-btn" id="mute-btn" title="Mute microphone (voice disabled)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                        <line x1="12" y1="19" x2="12" y2="23"/>
-                        <line x1="8" y1="23" x2="16" y2="23"/>
-                        <line x1="1" y1="1" x2="23" y2="23" class="mute-line"/>
+                <button class="mute-btn" id="mute-btn" title="Unmute to enable voice">
+                    <svg class="icon-muted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                        <line x1="23" y1="9" x2="17" y2="15"/>
+                        <line x1="17" y1="9" x2="23" y2="15"/>
+                    </svg>
+                    <svg class="icon-unmuted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
                     </svg>
                 </button>
                 <div class="header-status">
@@ -36,26 +38,29 @@
 
         <main class="main">
             <div class="orb-section">
-                <div class="orb" id="orb">
-                    <div class="orb-galaxy">
-                        <div class="galaxy-star" style="--delay: 0s; --x: 20%; --y: 30%;"></div>
-                        <div class="galaxy-star" style="--delay: 0.5s; --x: 80%; --y: 20%;"></div>
-                        <div class="galaxy-star" style="--delay: 1s; --x: 60%; --y: 70%;"></div>
-                        <div class="galaxy-star" style="--delay: 1.5s; --x: 30%; --y: 80%;"></div>
-                        <div class="galaxy-star" style="--delay: 2s; --x: 75%; --y: 55%;"></div>
-                        <div class="galaxy-star" style="--delay: 0.3s; --x: 45%; --y: 15%;"></div>
-                        <div class="galaxy-star" style="--delay: 1.2s; --x: 15%; --y: 60%;"></div>
-                        <div class="galaxy-star" style="--delay: 0.8s; --x: 85%; --y: 85%;"></div>
+                <div class="orb-wrapper" id="orb-wrapper">
+                    <div class="orb" id="orb">
+                        <div class="orb-galaxy">
+                            <div class="galaxy-star" style="--delay: 0s; --x: 20%; --y: 30%;"></div>
+                            <div class="galaxy-star" style="--delay: 0.5s; --x: 80%; --y: 20%;"></div>
+                            <div class="galaxy-star" style="--delay: 1s; --x: 60%; --y: 70%;"></div>
+                            <div class="galaxy-star" style="--delay: 1.5s; --x: 30%; --y: 80%;"></div>
+                            <div class="galaxy-star" style="--delay: 2s; --x: 75%; --y: 55%;"></div>
+                            <div class="galaxy-star" style="--delay: 0.3s; --x: 45%; --y: 15%;"></div>
+                            <div class="galaxy-star" style="--delay: 1.2s; --x: 15%; --y: 60%;"></div>
+                            <div class="galaxy-star" style="--delay: 0.8s; --x: 85%; --y: 85%;"></div>
+                        </div>
+                        <div class="orb-outer-glow"></div>
+                        <div class="orb-ring orb-ring-3"></div>
+                        <div class="orb-ring orb-ring-2"></div>
+                        <div class="orb-ring orb-ring-1"></div>
+                        <div class="orb-core">
+                            <div class="orb-core-inner"></div>
+                        </div>
+                        <div class="orb-particles" id="orb-particles"></div>
                     </div>
-                    <div class="orb-outer-glow"></div>
-                    <div class="orb-ring orb-ring-3"></div>
-                    <div class="orb-ring orb-ring-2"></div>
-                    <div class="orb-ring orb-ring-1"></div>
-                    <div class="orb-core">
-                        <div class="orb-core-inner"></div>
-                    </div>
-                    <div class="orb-particles" id="orb-particles"></div>
                 </div>
+                <div class="orb-hint" id="orb-hint">Click orb to speak</div>
                 <div class="voice-status" id="voice-status"></div>
             </div>
 
@@ -63,7 +68,7 @@
                 <div class="messages" id="messages">
                     <div class="message assistant">
                         <div class="message-content">
-                            <p>Hello! I'm Raphael, your personal AI assistant. How can I help you today?</p>
+                            <p>Hello! I'm Raphael, your personal AI assistant. Click the orb above to speak, or type below.</p>
                         </div>
                     </div>
                 </div>
@@ -79,18 +84,10 @@
                 </button>
                 <textarea 
                     id="message-input" 
-                    placeholder="Type your message... (Hindi, English, or Hinglish)"
+                    placeholder="Type your message..."
                     rows="1"
                 ></textarea>
-                <button class="icon-btn voice-btn" id="voice-btn" title="Voice input (Left Alt+Enter)">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                        <line x1="12" y1="19" x2="12" y2="23"/>
-                        <line x1="8" y1="23" x2="16" y2="23"/>
-                    </svg>
-                </button>
-                <button class="icon-btn stop-btn hidden" id="stop-btn" title="Stop generation">
+                <button class="icon-btn stop-btn hidden" id="stop-btn" title="Stop (Esc)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                         <rect x="6" y="6" width="12" height="12" rx="2"/>
                     </svg>
@@ -101,7 +98,7 @@
                     </svg>
                 </button>
             </div>
-            <p class="input-hint">Enter to send | Shift+Enter for new line | Left Alt+Enter for voice</p>
+            <p class="input-hint">Enter to send | Esc to stop | Left Alt+Enter for voice</p>
         </footer>
     </div>
 
