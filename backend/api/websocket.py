@@ -89,12 +89,16 @@ manager = ConnectionManager()
 
 
 def extract_complete_sentences(text: str) -> tuple[list[str], str]:
-    parts = SENTENCE_END_PATTERN.split(text)
-    if len(parts) > 1:
-        complete = parts[:-1]
-        remainder = parts[-1]
-        return complete, remainder
-    return [], text
+    sentences = []
+    current = ""
+
+    for char in text:
+        current += char
+        if char in ".!?" and len(current.strip()) > 10:
+            sentences.append(current.strip())
+            current = ""
+
+    return sentences, current
 
 
 async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
@@ -261,21 +265,34 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                 continue
 
             if msg_type == "voice_start":
+                print(f"[WS] Voice start requested, muted={manager.is_muted(client_id)}")
                 if manager.is_muted(client_id):
                     await send_message("voice_state", state="muted")
                     continue
                 if voice_enabled and voice_service:
-                    await voice_service.start_listening()
-                    await send_message("voice_state", state="listening")
+                    try:
+                        await voice_service.start_listening()
+                        await send_message("voice_state", state="listening")
+                        print("[WS] Voice listening started")
+                    except Exception as e:
+                        print(f"[WS] Voice start error: {e}")
+                        await send_message("voice_state", state="idle")
                 continue
 
             if msg_type == "voice_stop":
+                print("[WS] Voice stop requested")
                 if voice_enabled and voice_service:
-                    text = await voice_service.stop_listening()
-                    if text:
-                        await send_message("transcription", content=text)
-                        asyncio.create_task(handle_generation(text))
-                    else:
+                    try:
+                        await send_message("voice_state", state="processing")
+                        text = await voice_service.stop_listening()
+                        print(f"[WS] Transcription result: {text}")
+                        if text:
+                            await send_message("transcription", content=text)
+                            asyncio.create_task(handle_generation(text))
+                        else:
+                            await send_message("voice_state", state="idle")
+                    except Exception as e:
+                        print(f"[WS] Voice stop error: {e}")
                         await send_message("voice_state", state="idle")
                 continue
 
