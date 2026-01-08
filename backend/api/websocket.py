@@ -111,6 +111,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
             reset_stop_func()
 
         await send_message("start", role="assistant")
+        print(f"[WS] Starting generation for: {user_content[:50]}...")
 
         history = manager.get_history(client_id)
         full_response = ""
@@ -201,6 +202,13 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
 
             await send_message("end", stopped=was_stopped)
 
+        except Exception as e:
+            print(f"Generation error: {e}")
+            import traceback
+
+            traceback.print_exc()
+            await send_message("chunk", content=f"Error: {str(e)}")
+            await send_message("end", stopped=True)
         except asyncio.CancelledError:
             if full_response:
                 manager.add_message(client_id, "assistant", full_response)
@@ -219,6 +227,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
             data = await websocket.receive_text()
             message = json.loads(data)
             msg_type = message.get("type")
+            print(f"[WS] Received: {msg_type} from {client_id}")
 
             if msg_type == "stop":
                 manager.request_stop(client_id)
@@ -235,6 +244,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
 
             if msg_type == "chat":
                 user_content = message.get("content", "")
+                print(f"[WS] Chat message: {user_content[:50]}...")
                 if user_content.strip():
                     asyncio.create_task(handle_generation(user_content))
                 continue
