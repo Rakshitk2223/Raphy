@@ -35,7 +35,7 @@ class VoiceService:
     def toggle_mute(self) -> bool:
         self.is_muted = not self.is_muted
         if self.is_muted:
-            self.stop_listening()
+            self.cancel_listening()
             self.set_state(VoiceState.MUTED)
         else:
             self.set_state(VoiceState.IDLE)
@@ -44,7 +44,7 @@ class VoiceService:
     def set_muted(self, muted: bool):
         self.is_muted = muted
         if muted:
-            self.stop_listening()
+            self.cancel_listening()
             self.set_state(VoiceState.MUTED)
         else:
             self.set_state(VoiceState.IDLE)

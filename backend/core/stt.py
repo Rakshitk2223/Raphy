@@ -13,14 +13,18 @@ def get_whisper_model():
     if _whisper_model is None:
         from faster_whisper import WhisperModel
 
-        model_size = "large-v3"
+        model_size = settings.stt_model
+        device = settings.stt_device if settings.stt_device != "auto" else "cuda"
+        compute_type = (
+            settings.stt_compute_type if settings.stt_compute_type != "auto" else "int8_float16"
+        )
 
         _whisper_model = WhisperModel(
             model_size,
-            device="cuda",
-            compute_type="int8_float16",
+            device=device,
+            compute_type=compute_type,
         )
-        print(f"Whisper model '{model_size}' loaded on GPU")
+        print(f"Whisper model '{model_size}' loaded on {device}")
 
     return _whisper_model
 
