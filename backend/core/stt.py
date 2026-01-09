@@ -1,4 +1,5 @@
 import asyncio
+import time
 from pathlib import Path
 from typing import Optional
 import numpy as np
@@ -16,7 +17,7 @@ def get_whisper_model():
         model_size = settings.stt_model
         device = settings.stt_device if settings.stt_device != "auto" else "cuda"
         compute_type = (
-            settings.stt_compute_type if settings.stt_compute_type != "auto" else "int8_float16"
+            settings.stt_compute_type if settings.stt_compute_type != "auto" else "float16"
         )
 
         _whisper_model = WhisperModel(
@@ -36,9 +37,13 @@ async def transcribe_audio(
 ) -> str:
     model = get_whisper_model()
 
+    if language is None:
+        language = settings.stt_language
+
     loop = asyncio.get_event_loop()
 
     def _transcribe():
+        transcribe_start = time.perf_counter()
         segments, info = model.transcribe(
             audio,
             beam_size=5,
@@ -48,11 +53,23 @@ async def transcribe_audio(
                 speech_pad_ms=200,
             ),
             language=language,
+            initial_prompt="This is a conversation in English or Hindi (Hinglish). The speaker may mix English and Hindi.",
         )
+
+        detected_lang = info.language if hasattr(info, "language") else None
+        prob = info.language_probability if hasattr(info, "language_probability") else 0
+        print(f"[STT] Detected language: {detected_lang}, probability: {prob:.2f}")
 
         text_parts = []
         for segment in segments:
             text_parts.append(segment.text.strip())
+
+        transcribe_time = time.perf_counter() - transcribe_start
+        audio_duration = len(audio) / sample_rate
+        rtf = transcribe_time / audio_duration if audio_duration > 0 else 0
+        print(
+            f"[TIMING] STT transcribe: {transcribe_time:.2f}s for {audio_duration:.1f}s audio (RTF: {rtf:.2f}x)"
+        )
 
         return " ".join(text_parts)
 

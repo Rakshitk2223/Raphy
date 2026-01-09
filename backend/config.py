@@ -22,7 +22,8 @@ class Settings(BaseSettings):
 
     stt_model: Literal["large-v3", "medium", "small", "base", "tiny"] = "large-v3"
     stt_device: Literal["cuda", "cpu", "auto"] = "auto"
-    stt_compute_type: Literal["float16", "int8", "int8_float16", "auto"] = "auto"
+    stt_compute_type: Literal["float16", "int8", "int8_float16", "auto"] = "float16"
+    stt_language: str | None = None
 
     tts_streaming: bool = True
 

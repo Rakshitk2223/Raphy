@@ -61,18 +61,31 @@ class VoiceService:
 
     async def stop_listening(self) -> Optional[str]:
         if self.state != VoiceState.LISTENING:
+            print("[Voice] stop_listening called but not in LISTENING state")
             return None
 
         self.set_state(VoiceState.PROCESSING)
 
         audio = audio_recorder.stop_recording()
+        print(f"[Voice] Recorded audio: {len(audio)} samples, duration: {len(audio) / 16000:.2f}s")
 
         if len(audio) < 1600:
+            print("[Voice] Audio too short, discarding")
             self.set_state(VoiceState.IDLE)
             return None
 
+        import numpy as np
+
+        rms = np.sqrt(np.mean(audio**2))
+        print(f"[Voice] Audio RMS energy: {rms:.6f}")
+
+        if rms < 0.001:
+            print("[Voice] Audio too quiet, might be silence")
+
         try:
+            print("[Voice] Starting transcription...")
             text = await transcribe_audio(audio)
+            print(f"[Voice] Transcription result: '{text}'")
             self.set_state(VoiceState.IDLE)
 
             if text and text.strip():
@@ -82,6 +95,10 @@ class VoiceService:
 
             return None
         except Exception as e:
+            print(f"[Voice] Transcription error: {e}")
+            import traceback
+
+            traceback.print_exc()
             self.set_state(VoiceState.IDLE)
             if self.on_error:
                 self.on_error(str(e))

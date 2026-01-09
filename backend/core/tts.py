@@ -2,6 +2,7 @@ import asyncio
 import re
 import subprocess
 import tempfile
+import time
 import wave
 from pathlib import Path
 from typing import AsyncGenerator, Optional
@@ -46,10 +47,23 @@ _playback_lock = asyncio.Lock()
 _stop_requested = False
 
 
-def strip_emojis(text: str) -> str:
-    cleaned = EMOJI_PATTERN.sub("", text)
+def clean_text_for_speech(text: str) -> str:
+    cleaned = text
+    cleaned = re.sub(r"\\\[|\\\]|\\\(|\\\)", "", cleaned)
+    cleaned = re.sub(r"\\times", " times ", cleaned)
+    cleaned = re.sub(r"\\div", " divided by ", cleaned)
+    cleaned = re.sub(r"\\frac\{([^}]+)\}\{([^}]+)\}", r"\1 over \2", cleaned)
+    cleaned = re.sub(r"\\sqrt\{([^}]+)\}", r"square root of \1", cleaned)
+    cleaned = re.sub(r"\\[a-zA-Z]+", "", cleaned)
+    cleaned = re.sub(r"[*_`#~\[\]{}|<>\\]", "", cleaned)
+    cleaned = re.sub(r"\s*[:]\s*$", "", cleaned, flags=re.MULTILINE)
+    cleaned = EMOJI_PATTERN.sub("", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned
+
+
+def strip_emojis(text: str) -> str:
+    return clean_text_for_speech(text)
 
 
 def split_into_sentences(text: str) -> list[str]:
@@ -216,10 +230,18 @@ async def speak_sentence(sentence: str, language: Optional[str] = None) -> bool:
     if _stop_requested:
         return False
 
+    tts_start = time.perf_counter()
     wav_path = await synthesize_speech(sentence, language)
+    synth_time = time.perf_counter() - tts_start
+
     if wav_path and wav_path.exists():
+        play_start = time.perf_counter()
         await play_audio(wav_path)
+        play_time = time.perf_counter() - play_start
         wav_path.unlink(missing_ok=True)
+        print(
+            f"[TIMING] TTS synth: {synth_time:.2f}s, playback: {play_time:.2f}s for {len(sentence)} chars"
+        )
         return True
     return False
 

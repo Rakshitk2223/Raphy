@@ -2,6 +2,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 import json
 import asyncio
 import re
+import time
 
 from backend.core.llm import ollama_client
 from backend.config import settings
@@ -128,6 +129,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
         sentences_to_speak: asyncio.Queue = asyncio.Queue()
         speech_task = None
 
+        llm_start = time.perf_counter()
+        first_token_time = None
+        token_count = 0
+
         async def speech_worker():
             speaking_started = False
             while True:
@@ -161,6 +166,13 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
 
         try:
             async for chunk in ollama_client.generate_stream(history):
+                if first_token_time is None:
+                    first_token_time = time.perf_counter()
+                    ttft = first_token_time - llm_start
+                    print(f"[TIMING] Time to first token: {ttft:.2f}s")
+
+                token_count += 1
+
                 if manager.should_stop(client_id):
                     was_stopped = True
                     break
@@ -203,6 +215,13 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
 
             if full_response:
                 manager.add_message(client_id, "assistant", full_response)
+
+            llm_total = time.perf_counter() - llm_start
+            if token_count > 0:
+                tokens_per_sec = token_count / llm_total
+                print(
+                    f"[TIMING] LLM total: {llm_total:.2f}s, {token_count} tokens, {tokens_per_sec:.1f} tok/s"
+                )
 
             await send_message("end", stopped=was_stopped)
 
@@ -284,7 +303,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                 if voice_enabled and voice_service:
                     try:
                         await send_message("voice_state", state="processing")
+                        stt_start = time.perf_counter()
                         text = await voice_service.stop_listening()
+                        stt_time = time.perf_counter() - stt_start
+                        print(f"[TIMING] STT took {stt_time:.2f}s")
                         print(f"[WS] Transcription result: {text}")
                         if text:
                             await send_message("transcription", content=text)
