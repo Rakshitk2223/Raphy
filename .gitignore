@@ -44,3 +44,8 @@ htmlcov/
 # Build
 dist/
 build/
+
+# Node
+node_modules/
+bun.lock
+package.json

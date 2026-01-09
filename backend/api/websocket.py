@@ -26,6 +26,8 @@ try:
         speak_sentence as _speak_sentence,
         reset_stop_flag as _reset_stop,
         strip_emojis as _strip_emojis,
+        presynthesize as _presynthesize,
+        play_presynthesized as _play_presynthesized,
     )
 
     voice_service = _voice_service
@@ -33,9 +35,13 @@ try:
     speak_sentence_func = _speak_sentence
     reset_stop_func = _reset_stop
     strip_emojis_func = _strip_emojis
+    presynthesize_func = _presynthesize
+    play_presynthesized_func = _play_presynthesized
     voice_enabled = True
 except ImportError as e:
     print(f"Voice modules not available: {e}")
+    presynthesize_func = None
+    play_presynthesized_func = None
 
 
 class ConnectionManager:
@@ -95,7 +101,7 @@ def extract_complete_sentences(text: str) -> tuple[list[str], str]:
 
     for char in text:
         current += char
-        if char in ".!?" and len(current.strip()) > 10:
+        if char in ".!?" and len(current.strip()) > 5:
             sentences.append(current.strip())
             current = ""
 
@@ -127,42 +133,77 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
         should_speak = voice_enabled and speak_sentence_func and not manager.is_muted(client_id)
         speech_buffer = ""
         sentences_to_speak: asyncio.Queue = asyncio.Queue()
+        synth_results: asyncio.Queue = asyncio.Queue()
         speech_task = None
+        synth_task = None
 
         llm_start = time.perf_counter()
         first_token_time = None
         token_count = 0
 
-        async def speech_worker():
+        async def synthesis_worker():
+            while True:
+                try:
+                    item = await asyncio.wait_for(sentences_to_speak.get(), timeout=0.1)
+                    if item is None:
+                        await synth_results.put(None)
+                        break
+                    if manager.should_stop(client_id):
+                        await synth_results.put(None)
+                        break
+
+                    sentence, lang = item
+                    synth_start = time.perf_counter()
+                    wav_path = (
+                        await presynthesize_func(sentence, lang) if presynthesize_func else None
+                    )
+                    synth_time = time.perf_counter() - synth_start
+                    print(f"[TIMING] TTS synth: {synth_time:.2f}s for {len(sentence)} chars")
+                    await synth_results.put(wav_path)
+                    sentences_to_speak.task_done()
+                except asyncio.TimeoutError:
+                    if manager.should_stop(client_id):
+                        await synth_results.put(None)
+                        break
+                    continue
+                except Exception as e:
+                    print(f"Synthesis worker error: {e}")
+                    await synth_results.put(None)
+                    break
+
+        async def playback_worker():
             speaking_started = False
             while True:
                 try:
-                    sentence = await asyncio.wait_for(sentences_to_speak.get(), timeout=0.1)
-                    if sentence is None:
+                    wav_path = await asyncio.wait_for(synth_results.get(), timeout=0.1)
+                    if wav_path is None:
                         break
                     if manager.should_stop(client_id):
+                        if wav_path and hasattr(wav_path, "unlink"):
+                            wav_path.unlink(missing_ok=True)
                         break
 
                     if not speaking_started:
                         speaking_started = True
                         await send_message("voice_state", state="speaking")
 
-                    if speak_sentence_func:
-                        await speak_sentence_func(sentence)
-                    sentences_to_speak.task_done()
+                    if play_presynthesized_func and wav_path:
+                        await play_presynthesized_func(wav_path)
+                    synth_results.task_done()
                 except asyncio.TimeoutError:
                     if manager.should_stop(client_id):
                         break
                     continue
                 except Exception as e:
-                    print(f"Speech worker error: {e}")
+                    print(f"Playback worker error: {e}")
                     break
 
             if speaking_started:
                 await send_message("voice_state", state="idle")
 
-        if should_speak:
-            speech_task = asyncio.create_task(speech_worker())
+        if should_speak and presynthesize_func and play_presynthesized_func:
+            synth_task = asyncio.create_task(synthesis_worker())
+            speech_task = asyncio.create_task(playback_worker())
 
         try:
             async for chunk in ollama_client.generate_stream(history):
@@ -186,7 +227,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                     for sentence in complete_sentences:
                         cleaned = strip_emojis_func(sentence) if strip_emojis_func else sentence
                         if cleaned.strip():
-                            await sentences_to_speak.put(cleaned.strip())
+                            await sentences_to_speak.put((cleaned.strip(), None))
 
                 current_time = asyncio.get_event_loop().time()
                 should_flush = (
@@ -206,10 +247,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
             if should_speak and speech_buffer.strip() and not was_stopped:
                 cleaned = strip_emojis_func(speech_buffer) if strip_emojis_func else speech_buffer
                 if cleaned.strip():
-                    await sentences_to_speak.put(cleaned.strip())
+                    await sentences_to_speak.put((cleaned.strip(), None))
 
             if should_speak:
                 await sentences_to_speak.put(None)
+                if synth_task:
+                    await synth_task
                 if speech_task:
                     await speech_task
 
@@ -237,13 +280,21 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                 manager.add_message(client_id, "assistant", full_response)
             await send_message("end", stopped=True)
         finally:
-            if should_speak and speech_task and not speech_task.done():
+            if should_speak:
                 await sentences_to_speak.put(None)
-                speech_task.cancel()
-                try:
-                    await speech_task
-                except asyncio.CancelledError:
-                    pass
+                if synth_task and not synth_task.done():
+                    synth_task.cancel()
+                    try:
+                        await synth_task
+                    except asyncio.CancelledError:
+                        pass
+                if speech_task and not speech_task.done():
+                    await synth_results.put(None)
+                    speech_task.cancel()
+                    try:
+                        await speech_task
+                    except asyncio.CancelledError:
+                        pass
 
     try:
         while True:

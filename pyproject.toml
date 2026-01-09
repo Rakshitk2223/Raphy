@@ -1,7 +1,7 @@
 [project]
 name = "raphael"
-version = "0.1.0"
-description = "Raphael - A personal AI assistant inspired by the Great Sage"
+version = "0.2.0"
+description = "Raphael - A local, privacy-first personal AI assistant inspired by the Great Sage"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.28.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.6.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -26,7 +27,7 @@ dev = [
 voice = [
     "faster-whisper>=1.0.0",
     "piper-tts>=1.2.0",
-    "openwakeword>=0.6.0",
+    "edge-tts>=7.0.0",
     "sounddevice>=0.5.0",
     "numpy>=2.0.0",
     "pynput>=1.7.6",

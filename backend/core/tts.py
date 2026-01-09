@@ -11,11 +11,16 @@ import sounddevice as sd
 
 from backend.config import settings
 
+EDGE_VOICES = {
+    "en": "en-US-AriaNeural",
+    "hi": "hi-IN-SwaraNeural",
+}
+
 PIPER_VOICES = {
     "en": {
-        "name": "en_US-amy-medium",
-        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx",
-        "config_url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx.json",
+        "name": "en_US-lessac-medium",
+        "url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium/en_US-lessac-medium.onnx",
+        "config_url": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json",
     },
     "hi": {
         "name": "hi_IN-priyamvada-medium",
@@ -45,6 +50,9 @@ SENTENCE_END_PATTERN = re.compile(r"(?<=[.!?])\s+(?=[A-Z\u0900-\u097F])|(?<=[.!?
 
 _playback_lock = asyncio.Lock()
 _stop_requested = False
+_use_edge_tts = True
+
+SPEECH_RATE = 1.0
 
 
 def clean_text_for_speech(text: str) -> str:
@@ -121,18 +129,36 @@ async def download_voice(language: str) -> bool:
         return False
 
 
-async def synthesize_speech(
+async def synthesize_with_edge(
     text: str,
     language: Optional[str] = None,
     output_path: Optional[Path] = None,
 ) -> Optional[Path]:
-    if not text.strip():
+    try:
+        import edge_tts
+
+        if language is None:
+            language = detect_language(text)
+
+        voice = EDGE_VOICES.get(language, EDGE_VOICES["en"])
+
+        if output_path is None:
+            output_path = Path(tempfile.mktemp(suffix=".mp3"))
+
+        communicate = edge_tts.Communicate(text, voice, rate="+10%")
+        await communicate.save(str(output_path))
+
+        return output_path
+    except Exception as e:
+        print(f"Edge TTS error: {e}")
         return None
 
-    text = strip_emojis(text)
-    if not text.strip():
-        return None
 
+async def synthesize_with_piper(
+    text: str,
+    language: Optional[str] = None,
+    output_path: Optional[Path] = None,
+) -> Optional[Path]:
     if language is None:
         language = detect_language(text)
 
@@ -181,12 +207,33 @@ async def synthesize_speech(
     return result
 
 
-async def speak(text: str, language: Optional[str] = None):
-    wav_path = await synthesize_speech(text, language)
+async def synthesize_speech(
+    text: str,
+    language: Optional[str] = None,
+    output_path: Optional[Path] = None,
+) -> Optional[Path]:
+    if not text.strip():
+        return None
 
-    if wav_path and wav_path.exists():
-        await play_audio(wav_path)
-        wav_path.unlink(missing_ok=True)
+    text = strip_emojis(text)
+    if not text.strip():
+        return None
+
+    if _use_edge_tts:
+        result = await synthesize_with_edge(text, language, output_path)
+        if result:
+            return result
+        print("Edge TTS failed, falling back to Piper")
+
+    return await synthesize_with_piper(text, language, output_path)
+
+
+async def speak(text: str, language: Optional[str] = None):
+    audio_path = await synthesize_speech(text, language)
+
+    if audio_path and audio_path.exists():
+        await play_audio(audio_path)
+        audio_path.unlink(missing_ok=True)
 
 
 async def speak_streaming(text_generator: AsyncGenerator[str, None], on_sentence_start=None):
@@ -231,14 +278,14 @@ async def speak_sentence(sentence: str, language: Optional[str] = None) -> bool:
         return False
 
     tts_start = time.perf_counter()
-    wav_path = await synthesize_speech(sentence, language)
+    audio_path = await synthesize_speech(sentence, language)
     synth_time = time.perf_counter() - tts_start
 
-    if wav_path and wav_path.exists():
+    if audio_path and audio_path.exists():
         play_start = time.perf_counter()
-        await play_audio(wav_path)
+        await play_audio(audio_path)
         play_time = time.perf_counter() - play_start
-        wav_path.unlink(missing_ok=True)
+        audio_path.unlink(missing_ok=True)
         print(
             f"[TIMING] TTS synth: {synth_time:.2f}s, playback: {play_time:.2f}s for {len(sentence)} chars"
         )
@@ -246,14 +293,59 @@ async def speak_sentence(sentence: str, language: Optional[str] = None) -> bool:
     return False
 
 
-async def play_audio(file_path: Path):
+async def presynthesize(sentence: str, language: Optional[str] = None) -> Optional[Path]:
+    if _stop_requested:
+        return None
+    return await synthesize_speech(sentence, language)
+
+
+async def play_presynthesized(audio_path: Optional[Path]) -> bool:
+    global _stop_requested
+    if _stop_requested or audio_path is None:
+        return False
+
+    if audio_path.exists():
+        play_start = time.perf_counter()
+        await play_audio(audio_path)
+        play_time = time.perf_counter() - play_start
+        audio_path.unlink(missing_ok=True)
+        print(f"[TIMING] TTS playback: {play_time:.2f}s (pre-synthesized)")
+        return True
+    return False
+
+
+async def play_audio(file_path: Path, speed: float = SPEECH_RATE):
     global _stop_requested
     loop = asyncio.get_event_loop()
 
     def _play():
         global _stop_requested
         try:
-            with wave.open(str(file_path), "rb") as wf:
+            actual_path = file_path
+
+            if file_path.suffix == ".mp3":
+                wav_path = file_path.with_suffix(".wav")
+                result = subprocess.run(
+                    [
+                        "ffmpeg",
+                        "-y",
+                        "-i",
+                        str(file_path),
+                        "-ar",
+                        "24000",
+                        "-ac",
+                        "1",
+                        str(wav_path),
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                )
+                if result.returncode != 0:
+                    print(f"ffmpeg error: {result.stderr.decode()}")
+                    return
+                actual_path = wav_path
+
+            with wave.open(str(actual_path), "rb") as wf:
                 sample_rate = wf.getframerate()
                 channels = wf.getnchannels()
                 frames = wf.readframes(wf.getnframes())
@@ -264,12 +356,16 @@ async def play_audio(file_path: Path):
                 if channels > 1:
                     audio = audio.reshape(-1, channels)
 
-                sd.play(audio, sample_rate)
-                while sd.get_stream().active:
-                    if _stop_requested:
-                        sd.stop()
-                        break
-                    sd.sleep(50)
+            if file_path.suffix == ".mp3":
+                actual_path.unlink(missing_ok=True)
+
+            adjusted_rate = int(sample_rate * speed)
+            sd.play(audio, adjusted_rate)
+            while sd.get_stream().active:
+                if _stop_requested:
+                    sd.stop()
+                    break
+                sd.sleep(50)
         except Exception as e:
             print(f"Audio playback error: {e}")
 
@@ -286,3 +382,9 @@ def stop_playback():
 def reset_stop_flag():
     global _stop_requested
     _stop_requested = False
+
+
+def set_tts_backend(use_edge: bool = True):
+    global _use_edge_tts
+    _use_edge_tts = use_edge
+    print(f"TTS backend: {'Edge TTS' if use_edge else 'Piper'}")

@@ -126,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         content.className = 'message-content';
         
         const paragraph = document.createElement('p');
+        paragraph.dataset.rawContent = '';
         paragraph.innerHTML = '<span class="typing-cursor"></span>';
         
         content.appendChild(paragraph);
@@ -138,11 +139,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const paragraph = messageElement.querySelector('p');
         const cursor = paragraph.querySelector('.typing-cursor');
         
+        paragraph.dataset.rawContent = (paragraph.dataset.rawContent || '') + text;
+        
         if (cursor) {
             cursor.remove();
         }
         
-        paragraph.innerHTML += escapeHtml(text);
+        paragraph.innerHTML = formatMessageLive(paragraph.dataset.rawContent);
         paragraph.innerHTML += '<span class="typing-cursor"></span>';
     }
 
@@ -153,11 +156,14 @@ document.addEventListener('DOMContentLoaded', () => {
             cursor.remove();
         }
         
-        let content = paragraph.textContent;
+        let content = paragraph.dataset.rawContent || paragraph.textContent;
         if (wasStopped && content) {
             content += ' [stopped]';
         }
         paragraph.innerHTML = formatMessage(content);
+        
+        addCopyButton(messageElement);
+        addCodeCopyButtons(messageElement);
     }
 
     function escapeHtml(text) {
@@ -168,13 +174,109 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function formatMessage(text) {
         let formatted = escapeHtml(text);
-        formatted = formatted.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+        formatted = formatted.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>');
         formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
         formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        formatted = formatted.replace(/^---$/gm, '<hr>');
         formatted = formatted.replace(/\n/g, '<br>');
         
         return formatted;
+    }
+
+    function formatMessageLive(text) {
+        let formatted = escapeHtml(text);
+        
+        const completeCodeBlocks = [];
+        formatted = formatted.replace(/```(\w*)\n?([\s\S]*?)```/g, (match, lang, code) => {
+            const placeholder = `__CODE_BLOCK_${completeCodeBlocks.length}__`;
+            completeCodeBlocks.push(`<pre><code class="language-${lang}">${code}</code></pre>`);
+            return placeholder;
+        });
+        
+        formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+        formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        formatted = formatted.replace(/^---$/gm, '<hr>');
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        completeCodeBlocks.forEach((block, i) => {
+            formatted = formatted.replace(`__CODE_BLOCK_${i}__`, block);
+        });
+        
+        return formatted;
+    }
+
+    function addCopyButton(messageElement) {
+        const content = messageElement.querySelector('.message-content');
+        if (!content || messageElement.querySelector('.copy-msg-btn')) return;
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-msg-btn';
+        copyBtn.title = 'Copy message';
+        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>`;
+        
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const paragraph = messageElement.querySelector('p');
+            const text = paragraph.dataset.rawContent || paragraph.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.classList.add('copied');
+                copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>`;
+                setTimeout(() => {
+                    copyBtn.classList.remove('copied');
+                    copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>`;
+                }, 2000);
+            });
+        });
+        
+        content.appendChild(copyBtn);
+    }
+
+    function addCodeCopyButtons(messageElement) {
+        const codeBlocks = messageElement.querySelectorAll('pre');
+        codeBlocks.forEach(pre => {
+            if (pre.querySelector('.copy-code-btn')) return;
+            
+            pre.style.position = 'relative';
+            
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-code-btn';
+            copyBtn.title = 'Copy code';
+            copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>`;
+            
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const code = pre.querySelector('code');
+                const text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    copyBtn.classList.add('copied');
+                    copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>`;
+                    setTimeout(() => {
+                        copyBtn.classList.remove('copied');
+                        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>`;
+                    }, 2000);
+                });
+            });
+            
+            pre.appendChild(copyBtn);
+        });
     }
 
     function addUserMessage(content) {
