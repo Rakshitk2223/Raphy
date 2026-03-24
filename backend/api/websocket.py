@@ -426,6 +426,86 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                         print(f"[WS] Conv stop error: {e}")
                 continue
 
+            if msg_type == "memory_search":
+                try:
+                    from backend.memory.vector import memory_store
+
+                    query = message.get("query", "")
+                    top_k = message.get("top_k", 5)
+                    results = memory_store.search_knowledge(query, top_k)
+                    await send_message("memory_search", results=results)
+                except ImportError:
+                    await send_message("error", content="Memory module not available")
+                continue
+
+            if msg_type == "memory_add":
+                try:
+                    from backend.memory.vector import memory_store
+
+                    key = message.get("key", "")
+                    value = message.get("value", "")
+                    if key and value:
+                        note = memory_store.add_note(key, value)
+                        await send_message("memory_add", note=note)
+                    else:
+                        await send_message("error", content="key and value required")
+                except ImportError:
+                    await send_message("error", content="Memory module not available")
+                continue
+
+            if msg_type == "memory_get":
+                try:
+                    from backend.memory.vector import memory_store
+
+                    note_id = message.get("id", "")
+                    note = memory_store.get_note(note_id)
+                    if note:
+                        await send_message("memory_get", note=note)
+                    else:
+                        await send_message("error", content="Note not found")
+                except ImportError:
+                    await send_message("error", content="Memory module not available")
+                continue
+
+            if msg_type == "memory_update":
+                try:
+                    from backend.memory.vector import memory_store
+
+                    note_id = message.get("id", "")
+                    key = message.get("key")
+                    value = message.get("value")
+                    note = memory_store.update_note(note_id, key, value)
+                    if note:
+                        await send_message("memory_update", note=note)
+                    else:
+                        await send_message("error", content="Note not found")
+                except ImportError:
+                    await send_message("error", content="Memory module not available")
+                continue
+
+            if msg_type == "memory_delete":
+                try:
+                    from backend.memory.vector import memory_store
+
+                    note_id = message.get("id", "")
+                    if memory_store.delete_note(note_id):
+                        await send_message("memory_delete", id=note_id)
+                    else:
+                        await send_message("error", content="Note not found")
+                except ImportError:
+                    await send_message("error", content="Memory module not available")
+                continue
+
+            if msg_type == "memory_list":
+                try:
+                    from backend.memory.vector import memory_store
+
+                    notes = memory_store.list_notes()
+                    await send_message("memory_list", notes=notes)
+                except ImportError:
+                    await send_message("error", content="Memory module not available")
+                continue
+
     except WebSocketDisconnect:
         if conversational_service and conversational_service.is_running:
             await conversational_service.stop()

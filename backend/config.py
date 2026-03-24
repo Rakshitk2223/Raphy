@@ -48,5 +48,13 @@ class Settings(BaseSettings):
     def piper_model_dir(self) -> Path:
         return self.models_dir / "piper"
 
+    knowledge_dir: Path = Path("data/memory/knowledge")
+    notes_dir: Path = Path("data/memory/notes")
+    chroma_dir: Path = Path("data/memory/chroma")
+    embedding_model: str = "all-MiniLM-L6-v2"
+
+    chunk_size: int = 512
+    chunk_overlap: int = 50
+
 
 settings = Settings()

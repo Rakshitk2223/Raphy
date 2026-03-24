@@ -1,7 +1,11 @@
 # User data - never commit personal data
-data/
 models/whisper/
 models/piper/
+
+# Memory data (keep folder structure, ignore contents)
+data/memory/knowledge/
+data/memory/notes/
+data/memory/chroma/
 
 # Python
 .venv/
@@ -49,3 +53,7 @@ build/
 node_modules/
 bun.lock
 package.json
+
+# OpenCode
+.opencode/
+.opencode/plan.md
