@@ -4,106 +4,188 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raphael</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="/static/css/orb.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --text-primary: #e8e8ed;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent-primary: #6366f1;
+            --accent-secondary: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 2.5rem;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+        }
+
+        .modes {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mode-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 280px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .mode-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2);
+        }
+
+        .mode-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--bg-tertiary);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .mode-icon svg {
+            width: 30px;
+            height: 30px;
+            stroke: var(--accent-secondary);
+        }
+
+        .mode-card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .mode-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .mode-card .tag {
+            display: inline-block;
+            background: var(--bg-tertiary);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            margin-top: 1rem;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .footer a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <div class="app">
-        <header class="header">
-            <div class="header-title">
-                <span class="logo">R</span>
-                <h1>Raphael</h1>
-            </div>
-            <div class="header-controls">
-                <button class="mute-btn" id="mute-btn" title="Unmute to enable voice">
-                    <svg class="icon-muted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                        <line x1="23" y1="9" x2="17" y2="15"/>
-                        <line x1="17" y1="9" x2="23" y2="15"/>
-                    </svg>
-                    <svg class="icon-unmuted" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                    </svg>
-                </button>
-                <div class="header-status">
-                    <span class="status-indicator" id="status-indicator"></span>
-                    <span class="status-text" id="status-text">Connecting...</span>
-                </div>
-            </div>
-        </header>
+    <div class="container">
+        <div class="logo">R</div>
+        <h1>Raphael</h1>
+        <p class="subtitle">Your Personal AI Assistant</p>
 
-        <main class="main">
-            <div class="orb-section">
-                <div class="orb-wrapper" id="orb-wrapper">
-                    <div class="orb" id="orb">
-                        <div class="orb-galaxy">
-                            <div class="galaxy-star" style="--delay: 0s; --x: 20%; --y: 30%;"></div>
-                            <div class="galaxy-star" style="--delay: 0.5s; --x: 80%; --y: 20%;"></div>
-                            <div class="galaxy-star" style="--delay: 1s; --x: 60%; --y: 70%;"></div>
-                            <div class="galaxy-star" style="--delay: 1.5s; --x: 30%; --y: 80%;"></div>
-                            <div class="galaxy-star" style="--delay: 2s; --x: 75%; --y: 55%;"></div>
-                            <div class="galaxy-star" style="--delay: 0.3s; --x: 45%; --y: 15%;"></div>
-                            <div class="galaxy-star" style="--delay: 1.2s; --x: 15%; --y: 60%;"></div>
-                            <div class="galaxy-star" style="--delay: 0.8s; --x: 85%; --y: 85%;"></div>
-                        </div>
-                        <div class="orb-outer-glow"></div>
-                        <div class="orb-ring orb-ring-3"></div>
-                        <div class="orb-ring orb-ring-2"></div>
-                        <div class="orb-ring orb-ring-1"></div>
-                        <div class="orb-core">
-                            <div class="orb-core-inner"></div>
-                        </div>
-                        <div class="orb-particles" id="orb-particles"></div>
-                    </div>
+        <div class="modes">
+            <a href="/chat" class="mode-card">
+                <div class="mode-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
                 </div>
-                <div class="orb-hint" id="orb-hint">Click orb to speak</div>
-                <div class="voice-status" id="voice-status"></div>
-            </div>
+                <h2>Chat Mode</h2>
+                <p>Text-based conversations with multiple chat threads. Like ChatGPT or Gemini.</p>
+                <span class="tag">Text + Optional Voice Input</span>
+            </a>
 
-            <div class="chat-container" id="chat-container">
-                <div class="messages" id="messages">
-                    <div class="message assistant">
-                        <div class="message-content">
-                            <p>Hello! I'm Raphael, your personal AI assistant. Click the orb above to speak, or type below.</p>
-                        </div>
-                    </div>
+            <a href="/assistant" class="mode-card">
+                <div class="mode-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4M12 8h.01"></path>
+                    </svg>
                 </div>
-            </div>
-        </main>
+                <h2>Assistant Mode</h2>
+                <p>Voice-first interaction. Click the orb to speak, get instant spoken responses.</p>
+                <span class="tag">Voice Only</span>
+            </a>
+        </div>
 
-        <footer class="input-area">
-            <div class="input-container">
-                <button class="icon-btn clear-btn" id="clear-btn" title="Clear conversation">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/>
-                    </svg>
-                </button>
-                <textarea 
-                    id="message-input" 
-                    placeholder="Type your message..."
-                    rows="1"
-                ></textarea>
-                <button class="icon-btn stop-btn hidden" id="stop-btn" title="Stop (Esc)">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="6" y="6" width="12" height="12" rx="2"/>
-                    </svg>
-                </button>
-                <button class="icon-btn send-btn" id="send-btn" disabled title="Send message">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                    </svg>
-                </button>
-            </div>
-            <p class="input-hint">Enter to send | Esc to stop | Left Alt+Enter for voice</p>
-        </footer>
+        <div class="footer">
+            <p>Running locally on your machine. <a href="https://github.com/Rakshitk2223/Raphy" target="_blank">GitHub</a></p>
+        </div>
     </div>
-
-    <script src="/static/js/orb.js"></script>
-    <script src="/static/js/websocket.js"></script>
-    <script src="/static/js/app.js"></script>
 </body>
 </html>

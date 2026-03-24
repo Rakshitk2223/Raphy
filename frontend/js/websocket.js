@@ -133,6 +133,14 @@ class RaphaelWebSocket {
         this.send('voice_output', { enabled });
     }
 
+    startConversation() {
+        this.send('conv_start');
+    }
+
+    stopConversation() {
+        this.send('conv_stop');
+    }
+
     isConnected() {
         return this.ws && this.ws.readyState === WebSocket.OPEN;
     }

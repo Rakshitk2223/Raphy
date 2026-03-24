@@ -21,6 +21,7 @@ strip_emojis_func = None
 
 try:
     from backend.core.voice import voice_service as _voice_service
+    from backend.core.voice import conversational_service as _conversational_service
     from backend.core.tts import (
         speak as _speak,
         speak_sentence as _speak_sentence,
@@ -31,6 +32,7 @@ try:
     )
 
     voice_service = _voice_service
+    conversational_service = _conversational_service
     speak_func = _speak
     speak_sentence_func = _speak_sentence
     reset_stop_func = _reset_stop
@@ -42,6 +44,7 @@ except ImportError as e:
     print(f"Voice modules not available: {e}")
     presynthesize_func = None
     play_presynthesized_func = None
+    conversational_service = None
 
 
 class ConnectionManager:
@@ -131,6 +134,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
         was_stopped = False
 
         should_speak = voice_enabled and speak_sentence_func and not manager.is_muted(client_id)
+        print(
+            f"[DEBUG] should_speak={should_speak}, voice_enabled={voice_enabled}, muted={manager.is_muted(client_id)}"
+        )
         speech_buffer = ""
         sentences_to_speak: asyncio.Queue = asyncio.Queue()
         synth_results: asyncio.Queue = asyncio.Queue()
@@ -202,8 +208,13 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                 await send_message("voice_state", state="idle")
 
         if should_speak and presynthesize_func and play_presynthesized_func:
+            print("[DEBUG] Starting TTS workers for voice output")
             synth_task = asyncio.create_task(synthesis_worker())
             speech_task = asyncio.create_task(playback_worker())
+        else:
+            print(
+                f"[DEBUG] TTS workers NOT started: presynth={presynthesize_func is not None}, play={play_presynthesized_func is not None}"
+            )
 
         try:
             async for chunk in ollama_client.generate_stream(history):
@@ -376,7 +387,48 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                 await send_message("voice_state", state="idle")
                 continue
 
+            if msg_type == "conv_start":
+                print(f"[WS] Conversational mode start requested")
+                if voice_enabled and conversational_service:
+                    manager.set_muted(client_id, False)
+
+                    def on_conv_state_change(state):
+                        asyncio.create_task(send_message("voice_state", state=state.value))
+
+                    async def on_conv_transcription(text: str):
+                        print(f"[WS] Conv transcription: {text}")
+                        await send_message("transcription", content=text)
+                        await handle_generation(text)
+
+                    conversational_service.on_state_change = on_conv_state_change
+                    conversational_service.on_transcription = on_conv_transcription
+
+                    try:
+                        await conversational_service.start()
+                        await send_message("voice_state", state="listening")
+                        print("[WS] Conversational mode started")
+                    except Exception as e:
+                        print(f"[WS] Conv start error: {e}")
+                        import traceback
+
+                        traceback.print_exc()
+                        await send_message("voice_state", state="idle")
+                continue
+
+            if msg_type == "conv_stop":
+                print("[WS] Conversational mode stop requested")
+                if voice_enabled and conversational_service:
+                    try:
+                        await conversational_service.stop()
+                        await send_message("voice_state", state="idle")
+                        print("[WS] Conversational mode stopped")
+                    except Exception as e:
+                        print(f"[WS] Conv stop error: {e}")
+                continue
+
     except WebSocketDisconnect:
+        if conversational_service and conversational_service.is_running:
+            await conversational_service.stop()
         manager.disconnect(websocket, client_id)
     except Exception as e:
         try:

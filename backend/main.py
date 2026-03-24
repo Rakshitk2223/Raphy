@@ -33,6 +33,8 @@ async def lifespan(app: FastAPI):
         print(f"  Start with: sudo systemctl start ollama")
 
     print(f"\n  Web UI: http://{settings.host}:{settings.port}")
+    print(f"  - Chat Mode: http://{settings.host}:{settings.port}/chat")
+    print(f"  - Assistant Mode: http://{settings.host}:{settings.port}/assistant")
     print(f"{'=' * 50}\n")
 
     yield
@@ -44,7 +46,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Raphael",
     description="Personal AI Assistant",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -59,6 +61,16 @@ app.add_api_websocket_route("/ws/{client_id}", websocket_endpoint)
 @app.get("/")
 async def root():
     return FileResponse(frontend_path / "index.html")
+
+
+@app.get("/chat")
+async def chat_mode():
+    return FileResponse(frontend_path / "chat.html")
+
+
+@app.get("/assistant")
+async def assistant_mode():
+    return FileResponse(frontend_path / "assistant.html")
 
 
 def main():
