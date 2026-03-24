@@ -307,14 +307,20 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                     history = manager.get_history(client_id)
                     if len(history) >= 2:
                         print(f"[WS] Starting brain extraction for history length: {len(history)}")
-                        task = asyncio.create_task(extract_and_learn(history[-4:]))
-                        task.add_done_callback(
-                            lambda t: (
-                                print(f"[BRAIN] Extraction completed successfully")
-                                if not t.exception()
-                                else print(f"[BRAIN] Extraction task failed: {t.exception()}")
-                            )
-                        )
+
+                        async def handle_memory_result():
+                            try:
+                                result = await extract_and_learn(history[-4:])
+                                if result and isinstance(result, dict) and result.get("success"):
+                                    msg = result.get("message", "")
+                                    if msg:
+                                        await send_message("chunk", content=f"\n\n{msg}")
+                                        await send_message("memory_update", message=msg)
+                                        print(f"[WS] Memory response sent: {msg}")
+                            except Exception as e:
+                                print(f"[WS] Memory result handling error: {e}")
+
+                        asyncio.create_task(handle_memory_result())
                     else:
                         print(
                             f"[WS] Not enough history for brain extraction: {len(history) if history else 0} messages"

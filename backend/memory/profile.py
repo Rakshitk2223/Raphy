@@ -158,6 +158,17 @@ class UserProfile:
             return True
         return False
 
+    def delete_note_by_content(self, content_substring: str) -> bool:
+        notes = self._profile.get("notes", [])
+        original_len = len(notes)
+        self._profile["notes"] = [
+            n for n in notes if content_substring.lower() not in n.get("content", "").lower()
+        ]
+        if len(self._profile["notes"]) != original_len:
+            self.save()
+            return True
+        return False
+
     def update_from_chat(self, user_message: str, assistant_response: str = ""):
         """Learn from conversation - detect preferences automatically"""
         import re

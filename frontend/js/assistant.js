@@ -11,7 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let isSpeaking = false;
     let conversationActive = false;
 
-    const clientId = `assistant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    let clientId = localStorage.getItem('raphael_assistant_id');
+    if (!clientId) {
+        clientId = `assistant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('raphael_assistant_id', clientId);
+    }
+    
     const wsUrl = `ws://${window.location.host}/ws/${clientId}`;
 
     const ws = new RaphaelWebSocket(wsUrl, {
@@ -152,6 +157,15 @@ document.addEventListener('DOMContentLoaded', () => {
             ws.stopConversation();
         }
     });
+
+    window.clearAssistantSession = function() {
+        localStorage.removeItem('raphael_assistant_id');
+        ws.stopConversation();
+        setStatus('Session cleared. Refresh to start fresh.', '');
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    };
 
     setStatus('Connecting...', '');
 });

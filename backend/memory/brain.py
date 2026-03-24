@@ -9,46 +9,56 @@ import httpx
 from backend.config import settings
 
 
-EXTRACTION_PROMPT = """You are a user information extraction system. Analyze the conversation and extract information about the user.
+EXTRACTION_PROMPT = """You are a smart memory assistant. Analyze the conversation to determine what action to take with the user's memories.
 
-IMPORTANT: Separate information into TWO categories:
+EXISTING MEMORY DATA:
+{memory_context}
 
-1. PERSONAL INFO (permanent facts about the user):
-   - name, height, age, location, bio
-   - skills, job, company, role
-   - preferences, favorites, hobbies
-   - education, certifications
-   - anything the user says about themselves
-
-2. REMINDERS/SCHEDULES (actionable, time-sensitive):
-   - meetings, appointments, calls
-   - deadlines, dates to remember
-   - tasks, todo items
-   - anything the user wants to be reminded about
-   - words like "remind me", "remember to", "don't forget", "at 3pm", "tomorrow", "next week"
-
-Return a JSON object with this EXACT structure:
-{{
-    "personal": {{
-        "info": {{"key": "value"}},
-        "preferences": {{"key": "value"}},
-        "skills": ["skill1"],
-        "facts": [{{"fact": "fact", "category": "category"}}]
-    }},
-    "reminders": ["reminder text 1", "reminder text 2"]
-}}
-
-Categories for facts: personal, work, education, hobby, health, social, other
-
-IMPORTANT:
-- If user says "remind me..." or "remember to..." or mentions dates/times → add to reminders
-- If user mentions personal facts about themselves → add to personal
-- Only extract information explicitly stated, do not infer
-
-Conversation:
+CONVERSATION:
 {conversation}
 
-JSON:"""
+Your task is to understand the user's INTENT and extract the appropriate action.
+
+RETURN a JSON object with this EXACT structure:
+{{
+    "action": "CREATE|UPDATE|DELETE|QUERY|NONE",
+    "target": "preference|fact|reminder|skill|info|any",
+    "item_key": "the key being modified (e.g., 'favorite_color', 'dinner')",
+    "item_value": "the new value (for CREATE/UPDATE)",
+    "old_value": "the previous value if changing/updating (for UPDATE)",
+    "reminder_time": "time mentioned (for reminders only, e.g., '7:30 PM', 'tomorrow 3pm')",
+    "clarification_needed": true|false,
+    "clarification_question": "question to ask if similar but potentially different item exists",
+    "response_message": "what you should tell the user after the action"
+}}
+
+ACTION DEFINITIONS:
+- CREATE: Adding completely new info/reminder
+- UPDATE: Changing existing info (acknowledge old value)
+- DELETE: Removing info ("forget", "remove", "delete")
+- QUERY: User asking what they have saved
+- NONE: No memory action needed
+
+GUIDELINES:
+1. For UPDATE with different value: Set old_value and response_message like "I remember your favorite color was [old], I'll update it to [new]"
+2. For CLARIFICATION needed: Set clarification_needed=true and provide a question like "You already have dinner at 7:30 PM. Is this the same dinner or a different one?"
+3. For DELETE: Set item_key and response_message like "Okay, I've forgotten that about you"
+4. For QUERY: Set response_message asking what user wants to know
+5. For CREATE: Just add the new info normally
+6. If no memory action: action = "NONE"
+
+KEY DETECTION:
+- Preferences: favorite_color, favorite_food, favorite_car, favorite_movie, etc.
+- Facts: personal details, work info, education, hobbies
+- Reminders: meetings, tasks, events with times
+
+Examples:
+- "My favorite color is now red" → action=UPDATE, target=preference, item_key=favorite_color, item_value=red, old_value=blue, response_message="I remember your favorite color was blue, I'll update it to red"
+- "Remind me about dinner at 7:30" → action=CREATE, target=reminder, item_key=dinner, item_value=dinner at 7:30 PM, reminder_time=7:30 PM
+- "Forget my age" → action=DELETE, target=info, item_key=age, response_message="Okay, I've removed that information"
+- "What do you know about me?" → action=QUERY, target=any, response_message="I know..."
+
+Now analyze the conversation and return ONLY valid JSON:"""
 
 
 class Brain:
@@ -283,6 +293,103 @@ class Brain:
     def get_all_preferences(self) -> dict:
         return self._data.get("preferences", {})
 
+    def get_preference(self, key: str) -> Optional[str]:
+        prefs = self._data.get("preferences", {})
+        key_lower = key.lower().replace("favourite", "favorite")
+        for k, v in prefs.items():
+            if k.lower().replace("favourite", "favorite") == key_lower:
+                return v
+        return None
+
+    def get_memory_context(self) -> str:
+        parts = []
+
+        prefs = self._data.get("preferences", {})
+        if prefs:
+            parts.append("PREFERENCES:")
+            for k, v in prefs.items():
+                parts.append(f"  - {k}: {v}")
+
+        info = self._data.get("info", {})
+        if info:
+            parts.append("INFO:")
+            for k, v in info.items():
+                parts.append(f"  - {k}: {v}")
+
+        facts = self._data.get("learned_facts", [])
+        if facts:
+            parts.append("FACTS:")
+            for f in facts[-10:]:
+                parts.append(f"  - {f.get('fact', '')} ({f.get('category', '')})")
+
+        from backend.memory.profile import user_profile
+
+        reminders = user_profile.get_notes("reminder")
+        if reminders:
+            parts.append("REMINDERS:")
+            for r in reminders:
+                parts.append(f"  - {r.get('content', '')}")
+
+        if not parts:
+            return "No existing memory found."
+
+        return "\n".join(parts)
+
+    def query_memory(self, query: str = "all") -> str:
+        parts = []
+
+        prefs = self._data.get("preferences", {})
+        if prefs:
+            parts.append("Preferences:")
+            for k, v in prefs.items():
+                parts.append(f"  - {k}: {v}")
+
+        info = self._data.get("info", {})
+        if info:
+            parts.append("Personal Info:")
+            for k, v in info.items():
+                parts.append(f"  - {k}: {v}")
+
+        facts = self._data.get("learned_facts", [])
+        if facts:
+            parts.append("Facts I know about you:")
+            for f in facts:
+                parts.append(f"  - {f.get('fact', '')}")
+
+        from backend.memory.profile import user_profile
+
+        reminders = user_profile.get_notes("reminder")
+        if reminders:
+            parts.append("Your Reminders:")
+            for r in reminders:
+                parts.append(f"  - {r.get('content', '')}")
+
+        if not parts:
+            return "I don't have any information about you yet. Tell me something about yourself!"
+
+        return "\n".join(parts)
+
+    def update_fact(self, old_fact: str, new_fact: str):
+        facts = self._data.get("learned_facts", [])
+        for f in facts:
+            if old_fact.lower() in f.get("fact", "").lower():
+                f["fact"] = new_fact
+                f["updated_at"] = datetime.now().isoformat()
+                self.save()
+                return True
+        return False
+
+    def delete_fact(self, fact_text: str):
+        facts = self._data.get("learned_facts", [])
+        original_len = len(facts)
+        self._data["learned_facts"] = [
+            f for f in facts if fact_text.lower() not in f.get("fact", "").lower()
+        ]
+        if len(self._data["learned_facts"]) != original_len:
+            self.save()
+            return True
+        return False
+
     def get_skills(self) -> list:
         return self._data.get("skills", [])
 
@@ -441,12 +548,16 @@ async def extract_and_learn(messages: list[dict]):
         [f"{msg.get('role', 'user')}: {msg.get('content', '')}" for msg in recent_messages]
     )
 
+    memory_context = brain.get_memory_context()
+
+    prompt = EXTRACTION_PROMPT.format(memory_context=memory_context, conversation=conversation)
+
     try:
-        print(f"[BRAIN] Starting extraction for {len(messages)} messages")
+        print(f"[BRAIN] Starting smart extraction for {len(messages)} messages")
 
         payload = {
             "model": settings.ollama_model,
-            "prompt": EXTRACTION_PROMPT.format(conversation=conversation),
+            "prompt": prompt,
             "stream": False,
         }
 
@@ -457,54 +568,96 @@ async def extract_and_learn(messages: list[dict]):
                 result = response.json()
                 response_text = result.get("response", "").strip()
 
-                print(f"[BRAIN] Raw LLM response: {response_text[:500]}")
+                print(f"[BRAIN] Raw LLM response: {response_text[:800]}")
 
                 json_match = re.search(r"\{[\s\S]*\}", response_text)
                 if json_match:
                     try:
                         extracted = json.loads(json_match.group())
-                        print(f"[BRAIN] Extracted data: {extracted}")
+                        print(f"[BRAIN] Smart extraction result: {extracted}")
 
-                        learned_something = False
+                        action = extracted.get("action", "NONE")
+                        target = extracted.get("target", "any")
+                        item_key = extracted.get("item_key", "")
+                        item_value = extracted.get("item_value", "")
+                        old_value = extracted.get("old_value", "")
+                        reminder_time = extracted.get("reminder_time", "")
+                        clarification = extracted.get("clarification_needed", False)
+                        clarify_question = extracted.get("clarification_question", "")
+                        response_msg = extracted.get("response_message", "")
 
-                        personal = extracted.get("personal", {})
-                        if "info" in personal:
-                            for key, value in personal["info"].items():
-                                brain.update_info(key, value)
-                                learned_something = True
+                        result_message = None
 
-                        if "preferences" in personal:
-                            for key, value in personal["preferences"].items():
-                                brain.add_preference(key, value)
-                                learned_something = True
+                        if action == "CREATE":
+                            if target in ["preference", "info"]:
+                                brain.add_preference(item_key, item_value)
+                                result_message = (
+                                    response_msg
+                                    or f"Okay, I've noted that your {item_key} is {item_value}"
+                                )
+                            elif target == "fact":
+                                brain.add_fact(item_value, "general")
+                                result_message = (
+                                    response_msg or f"Okay, I've remembered: {item_value}"
+                                )
+                            elif target == "reminder":
+                                from backend.memory.profile import user_profile
 
-                        if "skills" in personal:
-                            for skill in personal["skills"]:
-                                brain.add_skill(skill)
-                                learned_something = True
+                                reminder_text = item_value
+                                if reminder_time:
+                                    reminder_text = f"{item_value} at {reminder_time}"
+                                user_profile.add_note(reminder_text, "reminder")
+                                result_message = response_msg or f"Reminder set: {reminder_text}"
 
-                        if "facts" in personal:
-                            for fact in personal["facts"]:
-                                brain.add_fact(fact.get("fact", ""), fact.get("category", "other"))
-                                learned_something = True
-
-                        reminders = extracted.get("reminders", [])
-                        if reminders:
-                            for reminder in reminders:
-                                if reminder:
-                                    from backend.memory.profile import user_profile
-
-                                    user_profile.add_note(reminder, "reminder")
-                                    learned_something = True
-
-                        if learned_something:
-                            print(
-                                f"[BRAIN] Learned: personal={len(personal.get('facts', []))} facts, reminders={len(reminders)}"
-                            )
+                            brain.save()
                             brain.sync_to_profile()
-                        else:
-                            print("[BRAIN] No new information to learn")
-                        return learned_something
+                            print(f"[BRAIN] CREATE: {item_key} = {item_value}")
+
+                        elif action == "UPDATE":
+                            if target in ["preference", "info"]:
+                                old = brain.get_preference(item_key) or old_value or "that"
+                                brain.add_preference(item_key, item_value)
+                                result_message = (
+                                    response_msg
+                                    or f"I remember your {item_key} was {old}, I've updated it to {item_value}"
+                                )
+                            elif target == "fact":
+                                brain.update_fact(item_key, item_value)
+                                result_message = response_msg or f"Updated: {item_value}"
+
+                            brain.save()
+                            brain.sync_to_profile()
+                            print(f"[BRAIN] UPDATE: {item_key} = {item_value} (was {old_value})")
+
+                        elif action == "DELETE":
+                            if target in ["preference", "info"]:
+                                brain.delete_info(item_key)
+                                brain.delete_preference(item_key)
+                            elif target == "fact":
+                                brain.delete_fact(item_key)
+                            elif target == "reminder":
+                                from backend.memory.profile import user_profile
+
+                                user_profile.delete_note_by_content(item_key)
+
+                            brain.save()
+                            brain.sync_to_profile()
+                            result_message = response_msg or f"Okay, I've removed that information"
+                            print(f"[BRAIN] DELETE: {item_key}")
+
+                        elif action == "QUERY":
+                            result_message = response_msg or brain.query_memory(item_key)
+                            print(f"[BRAIN] QUERY: {item_key}")
+
+                        elif clarification:
+                            result_message = clarify_question or "Could you clarify?"
+                            print(f"[BRAIN] CLARIFICATION NEEDED: {clarify_question}")
+
+                        if result_message:
+                            return {"success": True, "message": result_message, "action": action}
+
+                        return {"success": False, "action": "NONE"}
+
                     except json.JSONDecodeError as e:
                         print(f"[BRAIN] Failed to parse extraction JSON: {e}")
                 else:
