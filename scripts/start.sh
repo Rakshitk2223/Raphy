@@ -18,6 +18,8 @@ if ! systemctl is-active --quiet ollama; then
     sleep 2
 fi
 
+export OLLAMA_CUDA=1
+
 echo ""
 echo "Starting Raphael..."
 echo ""
