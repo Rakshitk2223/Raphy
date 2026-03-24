@@ -104,14 +104,23 @@ class UserProfile:
             if len(color) > 2 and color not in ["and", "the", "this", "that"]:
                 self.set_preference("favorite_color", color.capitalize())
 
-        # Pattern 2: "is Porsche" after "car"
+        # Pattern 2: "is Porsche 911 GT3 RS" - capture full car name
         car_match = re.search(
-            r"(?:fav(?:ourite|rite)?\s+car\s+(?:is\s+)?|car\s+(?:is\s+)?)([a-zA-Z]+)", message_lower
+            r"(?:fav(?:ourite|rite)?\s+car\s+(?:is\s+)?|car\s+(?:is\s+)?)(.+?)(?:\.|$|\?|!|,)",
+            message_lower,
         )
         if car_match:
             car = car_match.group(1).strip()
             if len(car) > 2 and car not in ["and", "the", "this", "that"]:
-                self.set_preference("favorite_car", car.capitalize())
+                self.set_preference("favorite_car", car)
+
+        # Also check for "its [car name]" pattern
+        if "its" in message_lower and "car" in message_lower:
+            its_match = re.search(r"its\s+(.+?)(?:\.|$|\?|!|,)", message_lower)
+            if its_match:
+                car = its_match.group(1).strip()
+                if len(car) > 2:
+                    self.set_preference("favorite_car", car)
 
         self.save()
 
