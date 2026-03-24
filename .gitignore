@@ -57,3 +57,4 @@ package.json
 # OpenCode
 .opencode/
 .opencode/plan.md
+.python-version

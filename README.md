@@ -7,7 +7,7 @@ A local, privacy-first personal AI assistant inspired by the Great Sage from "Th
 - **Local LLM** - Runs entirely on your machine using Ollama (Qwen 2.5)
 - **Voice Interaction** - Click the orb to speak, get spoken responses
 - **Hinglish Support** - Understands and responds in Hindi, English, or mixed
-- **Offline TTS** - Piper TTS runs completely offline (no cloud required)
+- **Qwen3-TTS** - State-of-the-art text-to-speech (97ms latency, multilingual)
 - **Real-time Streaming** - See responses as they're generated
 - **Privacy First** - All conversations stay on your machine
 - **File Knowledge** - Index your documents for the AI to search
@@ -47,13 +47,13 @@ All settings are in `backend/config.py` or `.env`:
 
 ```bash
 # LLM
-OLLAMA_MODEL=qwen2.5:7b-instruct-q5_K_M
+OLLAMA_MODEL=qwen2.5:7b-instruct-q4_K_M
 
 # STT (Speech to Text)
 STT_MODEL=large-v3
 
-# TTS (Text to Speech) - piper (free/offline) or edge (cloud)
-TTS_BACKEND=piper
+# TTS (Text to Speech) - qwen (best), piper (offline), edge (cloud)
+TTS_BACKEND=qwen
 ```
 
 ## File Knowledge (RAG)
@@ -85,9 +85,9 @@ Memory is stored in `data/memory/notes/notes.json`
 
 | Component | Model | Size | Purpose |
 |-----------|-------|------|---------|
-| LLM | Qwen 2.5 7B | 5.4 GB | Text generation |
+| LLM | Qwen 2.5 7B (Q4) | ~4 GB | Text generation |
 | STT | Whisper large-v3 | 2.9 GB | Speech recognition |
-| TTS | Piper (offline) | ~100 MB | Human-like speech |
+| TTS | Qwen3-TTS 0.6B | ~1.2 GB | Human-like speech (97ms latency) |
 
 ## Controls
 

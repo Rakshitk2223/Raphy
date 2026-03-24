@@ -50,7 +50,26 @@ SENTENCE_END_PATTERN = re.compile(r"(?<=[.!?])\s+(?=[A-Z\u0900-\u097F])|(?<=[.!?
 
 _playback_lock = asyncio.Lock()
 _stop_requested = False
-_use_edge_tts = settings.tts_backend == "edge"
+_tts_backend = settings.tts_backend
+
+# Qwen3-TTS model (lazy loaded)
+_qwen_model = None
+_qwen_device = "cuda"
+
+
+def get_qwen_model():
+    global _qwen_model
+    if _qwen_model is None:
+        print("Loading Qwen3-TTS model...")
+        from qwen_tts.inference.qwen3_tts_model import Qwen3TTSModel
+        import torch
+
+        _qwen_model = Qwen3TTSModel.from_pretrained(
+            "Qwen/Qwen3-TTS-12Hz-0.6B-Base", device_map="auto", torch_dtype=torch.bfloat16
+        )
+        print("Qwen3-TTS model loaded!")
+    return _qwen_model
+
 
 SPEECH_RATE = 1.0
 
@@ -207,6 +226,34 @@ async def synthesize_with_piper(
     return result
 
 
+async def synthesize_with_qwen(
+    text: str,
+    language: Optional[str] = None,
+    output_path: Optional[Path] = None,
+) -> Optional[Path]:
+    try:
+        import torch
+        import soundfile as sf
+
+        model = get_qwen_model()
+
+        if output_path is None:
+            output_path = Path(tempfile.mktemp(suffix=".wav"))
+
+        loop = asyncio.get_event_loop()
+
+        def _synthesize():
+            wavs, sr = model(text)
+            sf.write(str(output_path), wavs, sr)
+            return output_path
+
+        result = await loop.run_in_executor(None, _synthesize)
+        return result
+    except Exception as e:
+        print(f"Qwen TTS error: {e}")
+        return None
+
+
 async def synthesize_speech(
     text: str,
     language: Optional[str] = None,
@@ -219,7 +266,13 @@ async def synthesize_speech(
     if not text.strip():
         return None
 
-    if _use_edge_tts:
+    if _tts_backend == "qwen":
+        result = await synthesize_with_qwen(text, language, output_path)
+        if result:
+            return result
+        print("Qwen TTS failed, falling back to Piper")
+
+    if _tts_backend == "edge" or _tts_backend == "qwen":
         result = await synthesize_with_edge(text, language, output_path)
         if result:
             return result

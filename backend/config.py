@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     port: int = 8080
 
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen2.5:7b-instruct-q5_K_M"
+    ollama_model: str = "qwen2.5:7b-instruct-q4_K_M"
 
     stt_model: Literal["large-v3", "medium", "small", "base", "tiny"] = "large-v3"
     stt_device: Literal["cuda", "cpu", "auto"] = "auto"
@@ -26,7 +26,9 @@ class Settings(BaseSettings):
     stt_language: str | None = None
 
     tts_streaming: bool = True
-    tts_backend: Literal["piper", "edge"] = "piper"  # Free offline (piper) or cloud (edge)
+    tts_backend: Literal["piper", "edge", "qwen"] = (
+        "qwen"  # qwen (best), piper (offline), edge (cloud)
+    )
 
     data_dir: Path = Path("data")
     models_dir: Path = Path("models")
