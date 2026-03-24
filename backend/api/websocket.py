@@ -3,6 +3,8 @@ import json
 import asyncio
 import re
 import time
+from datetime import datetime
+from pathlib import Path
 
 from backend.core.llm import ollama_client
 from backend.config import settings
@@ -76,7 +78,12 @@ class ConnectionManager:
         if len(self.conversation_history[client_id]) > 40:
             self.conversation_history[client_id] = self.conversation_history[client_id][-40:]
 
+        if len(self.conversation_history[client_id]) % 10 == 0:
+            save_conversation_to_file(client_id, self.conversation_history[client_id])
+
     def clear_history(self, client_id: str):
+        if client_id in self.conversation_history and self.conversation_history[client_id]:
+            save_conversation_to_file(client_id, self.conversation_history[client_id])
         self.conversation_history[client_id] = []
 
     def request_stop(self, client_id: str):
@@ -96,6 +103,26 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+
+def save_conversation_to_file(client_id: str, messages: list[dict]):
+    if not messages:
+        return
+    try:
+        conv_dir = settings.conversations_dir
+        conv_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = conv_dir / f"conversation_{client_id}_{timestamp}.json"
+        data = {
+            "client_id": client_id,
+            "saved_at": datetime.now().isoformat(),
+            "message_count": len(messages),
+            "messages": messages,
+        }
+        filename.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+        print(f"[CONV] Saved conversation to {filename.name}")
+    except Exception as e:
+        print(f"[CONV] Failed to save conversation: {e}")
 
 
 def extract_complete_sentences(text: str) -> tuple[list[str], str]:
@@ -272,11 +299,38 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                 # Learn from conversation
                 try:
                     from backend.memory.profile import user_profile
+                    from backend.memory.brain import extract_and_learn, brain
 
                     user_profile.reload()
                     user_profile.update_from_chat(user_content, full_response)
+
+                    history = manager.get_history(client_id)
+                    if len(history) >= 2:
+                        print(f"[WS] Starting brain extraction for history length: {len(history)}")
+                        task = asyncio.create_task(extract_and_learn(history[-4:]))
+                        task.add_done_callback(
+                            lambda t: (
+                                print(f"[BRAIN] Extraction completed successfully")
+                                if not t.exception()
+                                else print(f"[BRAIN] Extraction task failed: {t.exception()}")
+                            )
+                        )
+                    else:
+                        print(
+                            f"[WS] Not enough history for brain extraction: {len(history) if history else 0} messages"
+                        )
+
+                    if len(history) >= 6 and len(history) % 6 == 0:
+                        summary_text = f"User asked about: {user_content[:100]}"
+                        user_profile.add_chat_summary(summary_text)
+                        print(f"[WS] Added chat summary")
+
+                    print(f"[WS] Brain data after learning: {brain.data}")
                 except Exception as e:
                     print(f"[WS] Memory learning error: {e}")
+                    import traceback
+
+                    traceback.print_exc()
 
             llm_total = time.perf_counter() - llm_start
             if token_count > 0:
@@ -523,6 +577,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
     except WebSocketDisconnect:
         if conversational_service and conversational_service.is_running:
             await conversational_service.stop()
+        if manager.conversation_history.get(client_id):
+            save_conversation_to_file(client_id, manager.conversation_history[client_id])
         manager.disconnect(websocket, client_id)
     except Exception as e:
         try:

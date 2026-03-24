@@ -112,6 +112,71 @@
     to { transform: rotate(360deg); }
 }
 
+.orb.speaking .orb-core {
+    animation: corePulse 3s ease-in-out infinite, speakingPulse 0.5s ease-in-out infinite;
+}
+
+.orb.speaking .orb-ring {
+    animation-duration: 2s;
+}
+
+.orb.listening .orb-core {
+    animation: corePulse 3s ease-in-out infinite, listeningPulse 1s ease-in-out infinite;
+}
+
+.orb.listening .orb-outer-glow {
+    animation: outerGlowPulse 2s ease-in-out infinite;
+}
+
+@keyframes speakingPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+@keyframes listeningPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.9; }
+}
+
+.orb-waveform {
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 20px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.orb.speaking .orb-waveform,
+.orb.listening .orb-waveform {
+    opacity: 1;
+}
+
+.orb-waveform span {
+    width: 3px;
+    background: var(--accent-cyan, #00f0ff);
+    border-radius: 2px;
+    animation: waveform 0.8s ease-in-out infinite;
+}
+
+.orb-waveform span:nth-child(1) { height: 8px; animation-delay: 0s; }
+.orb-waveform span:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+.orb-waveform span:nth-child(3) { height: 10px; animation-delay: 0.2s; }
+.orb-waveform span:nth-child(4) { height: 16px; animation-delay: 0.3s; }
+.orb-waveform span:nth-child(5) { height: 10px; animation-delay: 0.4s; }
+.orb-waveform span:nth-child(6) { height: 14px; animation-delay: 0.5s; }
+.orb-waveform span:nth-child(7) { height: 8px; animation-delay: 0.6s; }
+
+@keyframes waveform {
+    0%, 100% { transform: scaleY(0.5); }
+    50% { transform: scaleY(1); }
+}
+
 @keyframes corePulse {
     0%, 100% {
         transform: scale(1);

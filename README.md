@@ -1,13 +1,13 @@
 # Raphael
 
-A local, privacy-first personal AI assistant inspired by the Great Sage from "That Time I Got Reincarnated as a Slime."
+A local, privacy-first personal AI assistant.
 
 ## Features
 
 - **Local LLM** - Runs entirely on your machine using Ollama (Qwen 2.5)
 - **Voice Interaction** - Click the orb to speak, get spoken responses
 - **Hinglish Support** - Understands and responds in Hindi, English, or mixed
-- **Qwen3-TTS** - State-of-the-art text-to-speech (97ms latency, multilingual)
+- **Qwen3-TTS** - State-of-the-art text-to-speech
 - **Real-time Streaming** - See responses as they're generated
 - **Privacy First** - All conversations stay on your machine
 - **File Knowledge** - Index your documents for the AI to search
@@ -20,7 +20,7 @@ A local, privacy-first personal AI assistant inspired by the Great Sage from "Th
 git clone https://github.com/Rakshitk2223/Raphy.git
 cd Raphy
 
-# 2. Install dependencies
+# 2. Install dependencies (installs all voice, memory, tools)
 ./scripts/install.sh
 
 # 3. Start the server
@@ -36,10 +36,34 @@ Then open http://localhost:8080
 - 16GB RAM
 - CUDA-capable GPU
 
-### Software
+### Software (System Dependencies)
 - Python 3.11+
-- Ollama with CUDA support (`ollama-cuda` on Arch Linux)
+- Ollama with CUDA support
 - ffmpeg (for audio processing)
+- piper (TTS binary - `sudo pacman -S piper` or see piper-tts docs)
+
+### Install on Ubuntu/Debian:
+```bash
+# System deps
+sudo apt install ffmpeg python3-venv
+
+# Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Install and run
+./scripts/install.sh
+./scripts/start.sh
+```
+
+### Install on Arch Linux:
+```bash
+# System deps
+sudo pacman -S ffmpeg python piper
+
+# Install and run
+./scripts/install.sh
+./scripts/start.sh
+```
 
 ## Configuration
 

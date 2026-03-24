@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.getElementById('status-text');
 
     let currentChatId = null;
+    let learningTimeout = null;
     let chats = loadChats();
     let currentAssistantMessage = null;
     let isProcessing = false;
@@ -37,12 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
         onStart: (data) => {
             isProcessing = true;
             updateUI();
-            currentAssistantMessage = createMessage('assistant');
-            messagesContainer.appendChild(currentAssistantMessage);
+            showTypingIndicator();
             hideWelcome();
             scrollToBottom();
         },
         onChunk: (content) => {
+            if (!currentAssistantMessage) {
+                currentAssistantMessage = createMessage('assistant');
+                messagesContainer.appendChild(currentAssistantMessage);
+                hideTypingIndicator();
+            }
             if (currentAssistantMessage) {
                 appendToMessage(currentAssistantMessage, content);
                 scrollToBottom();
@@ -236,6 +241,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (welcome) {
             welcome.remove();
         }
+    }
+
+    let typingIndicator = null;
+
+    function showTypingIndicator() {
+        if (!typingIndicator) {
+            typingIndicator = document.createElement('div');
+            typingIndicator.className = 'typing-indicator';
+            typingIndicator.innerHTML = `
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span>Raphael is thinking...</span>
+            `;
+        }
+        typingIndicator.classList.remove('hidden');
+        messagesContainer.appendChild(typingIndicator);
+        scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+        if (typingIndicator) {
+            typingIndicator.classList.add('hidden');
+        }
+    }
+
+    function showLearningIndicator() {
+        statusText.textContent = 'Learning...';
+        if (learningTimeout) clearTimeout(learningTimeout);
+        learningTimeout = setTimeout(() => {
+            statusText.textContent = 'Connected';
+        }, 2000);
     }
 
     function createMessage(role) {

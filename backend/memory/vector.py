@@ -105,20 +105,29 @@ class MemoryStore:
             for note_id, data in notes.items()
         ]
 
-    def search_knowledge(self, query: str, top_k: int = 5) -> list[dict]:
+    def search_knowledge(self, query: str, top_k: int = 5, category: str = None) -> list[dict]:
         if self.collection.count() == 0:
             return []
 
         model = get_embedding_model()
         query_embedding = model.encode([query]).tolist()
-        results = self.collection.query(query_embeddings=query_embedding, n_results=top_k)
+
+        where_filter = {"category": category} if category else None
+        results = self.collection.query(
+            query_embeddings=query_embedding, n_results=top_k, where=where_filter
+        )
 
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
         distances = results.get("distances", [[]])[0]
 
         return [
-            {"content": doc, "source": meta.get("source", "unknown"), "score": 1 - dist}
+            {
+                "content": doc,
+                "source": meta.get("source", "unknown"),
+                "category": meta.get("category", "unknown"),
+                "score": dist,
+            }
             for doc, meta, dist in zip(documents, metadatas, distances)
         ]
 

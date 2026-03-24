@@ -74,7 +74,8 @@ echo ""
 echo "[3/6] Installing Python dependencies..."
 echo ""
 
-uv pip install -e .
+uv pip install -e ".[all]"
+uv pip install pathvalidate
 
 echo ""
 echo "[4/6] Setting up Ollama..."

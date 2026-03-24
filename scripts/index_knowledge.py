@@ -31,8 +31,85 @@ except ImportError:
     pd = None
 
 
-CHUNK_SIZE = 256
-CHUNK_OVERLAP = 30
+CHUNK_SIZE = 128
+CHUNK_OVERLAP = 20
+
+CATEGORY_PATTERNS = {
+    "finance": [
+        "bank",
+        "statement",
+        "loan",
+        "credit",
+        "debit",
+        "transaction",
+        "invoice",
+        "bill",
+        "tax",
+        "salary",
+        "expense",
+        "budget",
+        "investment",
+        "stock",
+        "crypto",
+    ],
+    "work": [
+        "resume",
+        "cv",
+        "job",
+        "work",
+        "employment",
+        "company",
+        "experience",
+        "skills",
+        "project",
+        "portfolio",
+        "certificate",
+        "offer",
+        "promotion",
+    ],
+    "education": [
+        "course",
+        "certificate",
+        "degree",
+        "university",
+        "college",
+        "school",
+        "grade",
+        "gpa",
+        "assignment",
+        "homework",
+        "tutorial",
+        "lecture",
+        "diploma",
+    ],
+    "plans": [
+        "plan",
+        "goal",
+        "roadmap",
+        "milestone",
+        "todo",
+        "task",
+        "schedule",
+        "timeline",
+        "target",
+        "objective",
+        "resolution",
+    ],
+    "personal": [
+        "notes",
+        "diary",
+        "journal",
+        "meeting",
+        "note",
+        "idea",
+        "thought",
+        "memory",
+        "birthday",
+        "contact",
+        "address",
+        "phone",
+    ],
+}
 
 
 def convert_pdf_to_markdown(file_path: Path) -> str:
@@ -137,6 +214,34 @@ def convert_file_to_markdown(file_path: Path) -> str:
         raise ValueError(f"Unsupported file type: {suffix}")
 
 
+def detect_category(filename: str, content: str = "") -> str:
+    filename_lower = filename.lower()
+    content_lower = content.lower() if content else ""
+
+    priority_order = ["work", "education", "finance", "plans", "personal"]
+
+    if "cv" in filename_lower or "resume" in filename_lower:
+        return "work"
+
+    for category in priority_order:
+        keywords = CATEGORY_PATTERNS.get(category, [])
+        for keyword in keywords:
+            if keyword in filename_lower or keyword in content_lower:
+                return category
+
+    return "personal"
+
+
+def get_chunk_size(file_type: str) -> int:
+    if file_type in [".csv", ".xlsx", ".xls"]:
+        return 64
+    elif file_type == ".json":
+        return 50
+    elif file_type in [".pdf", ".docx", ".doc"]:
+        return 150
+    return CHUNK_SIZE
+
+
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
     words = text.split()
     chunks = []
@@ -231,8 +336,12 @@ def main():
             print(f"  ERROR converting file: {e}")
             continue
 
-        chunks = chunk_text(markdown_text, args.chunk_size, args.chunk_overlap)
-        print(f"  Created {len(chunks)} chunks")
+        category = detect_category(file_path.name, markdown_text)
+        print(f"  Category: {category}")
+
+        chunk_size = get_chunk_size(file_path.suffix.lower())
+        chunks = chunk_text(markdown_text, chunk_size, args.chunk_overlap)
+        print(f"  Created {len(chunks)} chunks (size: {chunk_size})")
 
         ids = []
         documents = []
@@ -242,13 +351,13 @@ def main():
             chunk_id = f"{file_path.stem}_{i}"
             ids.append(chunk_id)
             documents.append(chunk)
-            metadatas.append({"source": file_path.name, "chunk_index": i})
+            metadatas.append({"source": file_path.name, "chunk_index": i, "category": category})
 
         if ids:
             embeddings = model.encode(documents).tolist()
             collection.add(ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas)
             total_chunks += len(chunks)
-            print(f"  Indexed {len(chunks)} chunks")
+            print(f"  Indexed {len(chunks)} chunks to {category}/")
 
     print(f"\n✓ Indexed {total_chunks} chunks from {len(files)} files")
     print(f"  Stored in: {chroma_dir}")

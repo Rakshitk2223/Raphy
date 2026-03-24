@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     tts_backend: Literal["piper", "edge", "qwen"] = (
         "qwen"  # qwen (best), piper (offline), edge (cloud)
     )
+    tts_voice: str = "af_sarah"  # Default voice for Edge TTS
 
     data_dir: Path = Path("data")
     models_dir: Path = Path("models")

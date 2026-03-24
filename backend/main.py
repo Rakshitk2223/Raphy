@@ -1,3 +1,4 @@
+import asyncio
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -32,6 +33,12 @@ async def lifespan(app: FastAPI):
         print(f"  WARNING: Ollama not running!")
         print(f"  Start with: sudo systemctl start ollama")
 
+    print(f"  Loading embedding model in background...")
+    asyncio.create_task(load_embedding_model_background())
+
+    print(f"  Loading TTS model in background...")
+    asyncio.create_task(load_tts_model_background())
+
     print(f"\n  Web UI: http://{settings.host}:{settings.port}")
     print(f"  - Chat Mode: http://{settings.host}:{settings.port}/chat")
     print(f"  - Assistant Mode: http://{settings.host}:{settings.port}/assistant")
@@ -41,6 +48,29 @@ async def lifespan(app: FastAPI):
 
     await ollama_client.close()
     print("\nRaphael shutting down. See you next time!")
+
+
+async def load_embedding_model_background():
+    from backend.memory.vector import get_embedding_model
+    import time
+
+    start = time.perf_counter()
+    await asyncio.to_thread(get_embedding_model)
+    elapsed = time.perf_counter() - start
+    print(f"  Embedding model loaded in {elapsed:.2f}s")
+
+
+async def load_tts_model_background():
+    from backend.core.tts import get_qwen_model
+    import time
+
+    start = time.perf_counter()
+    try:
+        await asyncio.to_thread(get_qwen_model)
+        elapsed = time.perf_counter() - start
+        print(f"  Qwen TTS model loaded in {elapsed:.2f}s")
+    except Exception as e:
+        print(f"  Qwen TTS failed to load: {e}")
 
 
 app = FastAPI(
