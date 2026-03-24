@@ -6,6 +6,7 @@ models/piper/
 data/memory/knowledge/
 data/memory/notes/
 data/memory/chroma/
+data/memory/profile.json
 
 # Python
 .venv/

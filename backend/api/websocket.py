@@ -269,6 +269,13 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
 
             if full_response:
                 manager.add_message(client_id, "assistant", full_response)
+                # Learn from conversation
+                try:
+                    from backend.memory.profile import user_profile
+
+                    user_profile.update_from_chat(user_content, full_response)
+                except Exception as e:
+                    print(f"[WS] Memory learning error: {e}")
 
             llm_total = time.perf_counter() - llm_start
             if token_count > 0:
@@ -289,6 +296,12 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
         except asyncio.CancelledError:
             if full_response:
                 manager.add_message(client_id, "assistant", full_response)
+                try:
+                    from backend.memory.profile import user_profile
+
+                    user_profile.update_from_chat(user_content, full_response)
+                except Exception:
+                    pass
             await send_message("end", stopped=True)
         finally:
             if should_speak:
