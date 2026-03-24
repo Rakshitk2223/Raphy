@@ -223,10 +223,71 @@ body {
     box-shadow: 0 0 20px var(--glow-cyan);
 }
 
-.hint {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    letter-spacing: 0.05em;
+.mute-btn {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border-glass);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 100;
+}
+
+.mute-btn:hover {
+    border-color: var(--border-glow);
+    color: var(--accent-cyan);
+    box-shadow: 0 0 15px var(--glow-cyan);
+}
+
+.mute-btn.muted {
+    background: rgba(255, 77, 106, 0.2);
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.mute-btn.muted:hover {
+    box-shadow: 0 0 20px rgba(255, 77, 106, 0.4);
+}
+
+.mute-btn .mic-off-icon {
+    display: none;
+}
+
+.mute-btn.muted .mic-icon {
+    display: none;
+}
+
+.mute-btn.muted .mic-off-icon {
+    display: block;
+}
+
+.footer {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    border-top: 1px solid var(--border-glass);
+    background: var(--bg-surface);
+}
+
+.footer .hint {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .footer {
+        gap: 1rem;
+    }
 }
 
 .hint kbd {

@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const orbElement = document.getElementById('orb');
     const voiceStatus = document.getElementById('voice-status');
     const statusIndicator = document.getElementById('status-indicator');
+    const muteBtn = document.getElementById('mute-btn');
 
     const orb = new OrbController(orbElement);
     
@@ -10,6 +11,38 @@ document.addEventListener('DOMContentLoaded', () => {
     let isProcessing = false;
     let isSpeaking = false;
     let conversationActive = false;
+    let isMuted = localStorage.getItem('raphael_muted') === 'true';
+
+    function updateMuteUI() {
+        if (isMuted) {
+            muteBtn.classList.add('muted');
+            orb.setIdle();
+            setStatus('Mic paused - click to unmute', '');
+        } else {
+            muteBtn.classList.remove('muted');
+            if (!conversationActive) {
+                orb.setListening();
+                setStatus('Listening...', 'listening');
+            }
+        }
+    }
+
+    if (muteBtn) {
+        muteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            isMuted = !isMuted;
+            localStorage.setItem('raphael_muted', isMuted);
+            updateMuteUI();
+            
+            if (!isMuted && conversationActive) {
+                ws.startConversation();
+            } else if (isMuted && conversationActive) {
+                ws.stopConversation();
+            }
+        });
+    }
+
+    updateMuteUI();
 
     let clientId = localStorage.getItem('raphael_assistant_id');
     if (!clientId) {
@@ -22,6 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const ws = new RaphaelWebSocket(wsUrl, {
         onConnect: () => {
             statusIndicator.classList.add('connected');
+            
+            if (isMuted) {
+                setStatus('Mic paused - click to unmute', '');
+                return;
+            }
+            
             setStatus('Starting...', 'thinking');
             
             setTimeout(() => {
@@ -81,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setStatus('Speaking... (click to interrupt)', 'speaking');
                     break;
                 case 'idle':
-                    if (!isProcessing) {
+                    if (!isProcessing && !isMuted) {
                         orb.setListening();
                         setStatus('Listening...', 'listening');
                     }
@@ -92,7 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     orb.setIdle();
                     isListening = false;
                     isSpeaking = false;
-                    setStatus('Muted. Click to unmute.', '');
+                    if (!isMuted) {
+                        setStatus('Muted. Click to unmute.', '');
+                    }
                     break;
             }
         },
@@ -114,6 +155,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleOrbClick() {
+        if (isMuted) {
+            isMuted = false;
+            localStorage.setItem('raphael_muted', isMuted);
+            updateMuteUI();
+            if (conversationActive) {
+                ws.startConversation();
+            }
+            return;
+        }
+        
         orb.pulse();
 
         if (isSpeaking) {
@@ -146,8 +197,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 ws.stopGeneration();
                 isSpeaking = false;
                 isProcessing = false;
-                orb.setListening();
-                setStatus('Stopped. Listening...', 'listening');
+                if (!isMuted) {
+                    orb.setListening();
+                    setStatus('Stopped. Listening...', 'listening');
+                }
             }
         }
     });
