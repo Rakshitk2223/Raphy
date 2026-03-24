@@ -35,7 +35,14 @@ class OllamaClient:
     ) -> AsyncIterator[str]:
         model = model or self.model
 
-        system_message = {"role": "system", "content": get_system_prompt()}
+        # Get the last user message for knowledge base search
+        user_message = ""
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                user_message = msg.get("content", "")
+                break
+
+        system_message = {"role": "system", "content": get_system_prompt(user_message)}
         full_messages = [system_message] + messages
 
         payload = {
