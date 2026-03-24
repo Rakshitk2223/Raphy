@@ -66,8 +66,66 @@ class Brain:
         else:
             self._create_default()
 
+        self._consolidate_from_profile()
+        self.cleanup_duplicates()
+
     def reload(self):
         self.load()
+
+    def _consolidate_from_profile(self):
+        profile_path = self.brain_path.parent / "profile.json"
+        if not profile_path.exists():
+            return
+
+        try:
+            profile_data = json.loads(profile_path.read_text(encoding="utf-8"))
+
+            if not profile_data:
+                return
+
+            merged = False
+
+            prefs = profile_data.get("preferences", {})
+            if prefs and isinstance(prefs, dict):
+                for k, v in prefs.items():
+                    if k not in self._data.get("preferences", {}):
+                        if "preferences" not in self._data:
+                            self._data["preferences"] = {}
+                        self._data["preferences"][k] = v
+                        merged = True
+
+            about = profile_data.get("about")
+            if about and not self._data.get("info", {}).get("about"):
+                if "info" not in self._data:
+                    self._data["info"] = {}
+                self._data["info"]["about"] = about
+                merged = True
+
+            notes = profile_data.get("notes", [])
+            if notes and not self._data.get("learned_facts"):
+                for note in notes:
+                    content = note.get("content", "")
+                    category = note.get("category", "general")
+                    if content and not any(
+                        f.get("fact") == content for f in self._data.get("learned_facts", [])
+                    ):
+                        if "learned_facts" not in self._data:
+                            self._data["learned_facts"] = []
+                        self._data["learned_facts"].append(
+                            {
+                                "fact": content,
+                                "category": category,
+                                "learned_at": note.get("created_at", datetime.now().isoformat()),
+                            }
+                        )
+                        merged = True
+
+            if merged:
+                self.deduplicate_preferences()
+                self.save()
+                print(f"[BRAIN] Consolidated data from profile.json")
+        except Exception as e:
+            print(f"[BRAIN] Failed to consolidate profile: {e}")
 
     def _create_default(self):
         self._data = {
@@ -132,19 +190,56 @@ class Brain:
         if "preferences" not in self._data:
             self._data["preferences"] = {}
 
-        key_lower = key.lower()
+        key_lower = key.lower().replace("favourite", "favorite")
         existing_key = None
         for k in self._data["preferences"]:
-            if k.lower() == key_lower:
+            if k.lower().replace("favourite", "favorite") == key_lower:
                 existing_key = k
                 break
 
-        if existing_key and self._data["preferences"][existing_key] != value:
-            self._data["preferences"][existing_key] = value
-        elif not existing_key:
-            self._data["preferences"][key] = value
+        if existing_key:
+            if self._data["preferences"][existing_key].lower() != value.lower():
+                self._data["preferences"][existing_key] = value
+                self.save()
+        else:
+            normalized_key = key.replace("favourite", "favorite")
+            self._data["preferences"][normalized_key] = value
+            self.save()
 
+    def deduplicate_preferences(self):
+        if "preferences" not in self._data:
+            return
+
+        normalized = {}
+        for k, v in self._data["preferences"].items():
+            key_lower = k.lower().replace("favourite", "favorite")
+            if key_lower not in normalized:
+                normalized[key_lower] = v
+            elif normalized[key_lower].lower() != v.lower():
+                normalized[key_lower] = v
+
+        self._data["preferences"] = normalized
         self.save()
+
+    def deduplicate_facts(self):
+        if "learned_facts" not in self._data:
+            return
+
+        seen = set()
+        unique_facts = []
+        for fact in self._data["learned_facts"]:
+            fact_text = fact.get("fact", "").lower()
+            if fact_text and fact_text not in seen:
+                seen.add(fact_text)
+                unique_facts.append(fact)
+
+        if len(unique_facts) != len(self._data["learned_facts"]):
+            self._data["learned_facts"] = unique_facts
+            self.save()
+
+    def cleanup_duplicates(self):
+        self.deduplicate_preferences()
+        self.deduplicate_facts()
 
     def add_project(self, project: dict):
         if "projects" not in self._data:
@@ -195,21 +290,24 @@ class Brain:
         return self._data.get("learned_facts", [])
 
     def update_info(self, key: str, value: str):
+        if "info" not in self._data:
+            self._data["info"] = {}
+
         key_lower = key.lower()
         existing_key = None
 
-        if "info" in self._data:
-            for k in self._data["info"]:
-                if k.lower() == key_lower:
-                    existing_key = k
-                    break
+        for k in self._data["info"]:
+            if k.lower() == key_lower:
+                existing_key = k
+                break
 
         if existing_key:
             if self._data["info"][existing_key] != value:
                 self._data["info"][existing_key] = value
                 self.save()
         else:
-            self.update_info(key, value)
+            self._data["info"][key] = value
+            self.save()
 
     def delete_info(self, key: str) -> bool:
         if "info" not in self._data:
@@ -290,6 +388,32 @@ class Brain:
             except:
                 return False
         return False
+
+    def sync_to_profile(self):
+        profile_path = self.brain_path.parent / "profile.json"
+        if not profile_path.exists():
+            return
+
+        try:
+            profile_data = json.loads(profile_path.read_text(encoding="utf-8"))
+            merged = False
+
+            prefs = self._data.get("preferences", {})
+            if prefs and isinstance(prefs, dict):
+                if "preferences" not in profile_data:
+                    profile_data["preferences"] = {}
+                for k, v in prefs.items():
+                    if k not in profile_data["preferences"]:
+                        profile_data["preferences"][k] = v
+                        merged = True
+
+            if merged:
+                profile_path.write_text(
+                    json.dumps(profile_data, indent=2, ensure_ascii=False), encoding="utf-8"
+                )
+                print(f"[BRAIN] Synced brain data to profile.json")
+        except Exception as e:
+            print(f"[BRAIN] Failed to sync to profile: {e}")
 
 
 brain = Brain()
@@ -377,6 +501,7 @@ async def extract_and_learn(messages: list[dict]):
                             print(
                                 f"[BRAIN] Learned: personal={len(personal.get('facts', []))} facts, reminders={len(reminders)}"
                             )
+                            brain.sync_to_profile()
                         else:
                             print("[BRAIN] No new information to learn")
                         return learned_something
