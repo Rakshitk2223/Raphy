@@ -56,8 +56,8 @@ class Settings(BaseSettings):
     chroma_dir: Path = Path("data/memory/chroma")
     embedding_model: str = "all-MiniLM-L6-v2"
 
-    chunk_size: int = 512
-    chunk_overlap: int = 50
+    chunk_size: int = 256
+    chunk_overlap: int = 30
 
 
 settings = Settings()

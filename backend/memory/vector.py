@@ -8,6 +8,17 @@ from sentence_transformers import SentenceTransformer
 
 from backend.config import settings
 
+_embedding_model = None
+
+
+def get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        print("Loading embedding model...")
+        _embedding_model = SentenceTransformer(settings.embedding_model)
+        print("Embedding model loaded!")
+    return _embedding_model
+
 
 class MemoryStore:
     def __init__(self):
@@ -98,7 +109,8 @@ class MemoryStore:
         if self.collection.count() == 0:
             return []
 
-        query_embedding = self.embedding_model.encode([query]).tolist()
+        model = get_embedding_model()
+        query_embedding = model.encode([query]).tolist()
         results = self.collection.query(query_embeddings=query_embedding, n_results=top_k)
 
         documents = results.get("documents", [[]])[0]

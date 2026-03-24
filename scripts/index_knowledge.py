@@ -21,8 +21,8 @@ except ImportError:
     markdownify = None
 
 
-CHUNK_SIZE = 512
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 256
+CHUNK_OVERLAP = 30
 
 
 def convert_pdf_to_markdown(file_path: Path) -> str:
