@@ -20,6 +20,16 @@ try:
 except ImportError:
     markdownify = None
 
+try:
+    import json
+except ImportError:
+    json = None
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
 
 CHUNK_SIZE = 256
 CHUNK_OVERLAP = 30
@@ -66,6 +76,48 @@ def convert_docx_to_markdown(file_path: Path) -> str:
     return "\n\n".join(parts)
 
 
+def convert_json_to_markdown(file_path: Path) -> str:
+    if json is None:
+        raise ImportError("json module not available")
+
+    try:
+        data = json.loads(file_path.read_text(encoding="utf-8"))
+        return json.dumps(data, indent=2)
+    except Exception as e:
+        return f"Error reading JSON: {e}"
+
+
+def convert_csv_to_markdown(file_path: Path) -> str:
+    if pd is None:
+        raise ImportError("pandas not installed")
+
+    try:
+        df = pd.read_csv(file_path)
+        return df.to_markdown(index=False)
+    except Exception as e:
+        try:
+            df = pd.read_excel(file_path)
+            return df.to_markdown(index=False)
+        except:
+            return f"Error reading file: {e}"
+
+
+def convert_excel_to_markdown(file_path: Path) -> str:
+    if pd is None:
+        raise ImportError("pandas not installed")
+
+    try:
+        sheets_dict = pd.read_excel(file_path, sheet_name=None)
+        parts = []
+        for sheet_name, df in sheets_dict.items():
+            parts.append(f"## Sheet: {sheet_name}\n")
+            parts.append(df.to_markdown(index=False))
+            parts.append("\n")
+        return "\n".join(parts)
+    except Exception as e:
+        return f"Error reading Excel: {e}"
+
+
 def convert_file_to_markdown(file_path: Path) -> str:
     suffix = file_path.suffix.lower()
 
@@ -73,6 +125,12 @@ def convert_file_to_markdown(file_path: Path) -> str:
         return convert_pdf_to_markdown(file_path)
     elif suffix in [".docx", ".doc"]:
         return convert_docx_to_markdown(file_path)
+    elif suffix == ".json":
+        return convert_json_to_markdown(file_path)
+    elif suffix == ".csv":
+        return convert_csv_to_markdown(file_path)
+    elif suffix in [".xlsx", ".xls"]:
+        return convert_excel_to_markdown(file_path)
     elif suffix in [".txt", ".md", ".markdown"]:
         return file_path.read_text(encoding="utf-8")
     else:
@@ -127,7 +185,18 @@ def main():
         print(f"Create it and add files to index: mkdir -p {knowledge_dir}")
         sys.exit(1)
 
-    supported_extensions = {".pdf", ".docx", ".doc", ".txt", ".md", ".markdown"}
+    supported_extensions = {
+        ".pdf",
+        ".docx",
+        ".doc",
+        ".txt",
+        ".md",
+        ".markdown",
+        ".json",
+        ".csv",
+        ".xlsx",
+        ".xls",
+    }
     files = [f for f in knowledge_dir.iterdir() if f.suffix.lower() in supported_extensions]
 
     if not files:
