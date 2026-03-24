@@ -90,29 +90,28 @@ class UserProfile:
 
     def update_from_chat(self, user_message: str, assistant_response: str):
         """Learn from conversation - detect preferences automatically"""
+        import re
+
         message_lower = user_message.lower()
 
-        # Detect favorite mentions
-        if "favorite" in message_lower or "favourite" in message_lower:
-            # Try to extract preference
-            if "color" in message_lower or "colour" in message_lower:
-                words = user_message.split()
-                for i, word in enumerate(words):
-                    if "color" in word.lower() or "colour" in word.lower():
-                        if i + 1 < len(words):
-                            # Next word might be the color
-                            possible_color = words[i + 1].strip(".,!?")
-                            if len(possible_color) > 2:
-                                self.set_preference("favorite_color", possible_color)
+        # Pattern 1: "is Blue" after "color" or "colour"
+        color_match = re.search(
+            r"(?:fav(?:ourite|rite)?\s+(?:color|colour)\s+(?:is\s+)?|color\s+(?:is\s+)?)([a-zA-Z]+)",
+            message_lower,
+        )
+        if color_match:
+            color = color_match.group(1).strip()
+            if len(color) > 2 and color not in ["and", "the", "this", "that"]:
+                self.set_preference("favorite_color", color.capitalize())
 
-            if "car" in message_lower:
-                words = user_message.split()
-                for i, word in enumerate(words):
-                    if "car" in word.lower():
-                        if i + 1 < len(words):
-                            possible_car = words[i + 1].strip(".,!?")
-                            if len(possible_car) > 2:
-                                self.set_preference("favorite_car", possible_car)
+        # Pattern 2: "is Porsche" after "car"
+        car_match = re.search(
+            r"(?:fav(?:ourite|rite)?\s+car\s+(?:is\s+)?|car\s+(?:is\s+)?)([a-zA-Z]+)", message_lower
+        )
+        if car_match:
+            car = car_match.group(1).strip()
+            if len(car) > 2 and car not in ["and", "the", "this", "that"]:
+                self.set_preference("favorite_car", car.capitalize())
 
         self.save()
 
