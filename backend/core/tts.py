@@ -243,9 +243,28 @@ async def synthesize_with_qwen(
         loop = asyncio.get_event_loop()
 
         def _synthesize():
-            wavs, sr = model(text)
-            sf.write(str(output_path), wavs, sr)
-            return output_path
+            try:
+                if hasattr(model, "generate_voice"):
+                    wavs = model.generate_voice(text)
+                elif hasattr(model, "__call__"):
+                    wavs = model(text)
+                else:
+                    print(f"Qwen TTS: model has no generate_voice or __call__ method")
+                    return None
+
+                if isinstance(wavs, tuple):
+                    wavs, sr = wavs
+                else:
+                    sr = 24000
+
+                sf.write(str(output_path), wavs, sr)
+                return output_path
+            except Exception as e:
+                print(f"Qwen TTS synthesis error: {e}")
+                import traceback
+
+                traceback.print_exc()
+                return None
 
         result = await loop.run_in_executor(None, _synthesize)
         return result

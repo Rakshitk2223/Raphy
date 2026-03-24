@@ -84,10 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
             orb.setThinking();
             setStatus('Thinking...', 'thinking');
         },
-        onChunk: (content) => {
-        },
         onEnd: (stopped) => {
             isProcessing = false;
+            if (currentAssistantMessage) {
+                addAssistantMessage(currentAssistantMessage);
+            }
             if (!isSpeaking) {
                 orb.setListening();
                 if (stopped) {
@@ -140,9 +141,41 @@ document.addEventListener('DOMContentLoaded', () => {
         onTranscription: (text) => {
             if (text) {
                 setStatus(`"${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`, 'thinking');
+                addConvMessage('user', text);
             }
+        },
+        onChunk: (content) => {
+            if (!currentAssistantMessage) {
+                currentAssistantMessage = '';
+            }
+            currentAssistantMessage += content;
         }
     });
+
+    let currentAssistantMessage = '';
+    const convMessages = document.getElementById('conversation-messages');
+
+    function addConvMessage(role, content) {
+        if (!convMessages || !content) return;
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `conv-message ${role}`;
+        
+        const roleLabel = role === 'user' ? 'You' : 'Raphael';
+        msgDiv.innerHTML = `
+            <div class="role">${roleLabel}</div>
+            <div class="content">${content}</div>
+        `;
+        
+        convMessages.appendChild(msgDiv);
+        convMessages.scrollTop = convMessages.scrollHeight;
+    }
+
+    function addAssistantMessage(content) {
+        if (!content) return;
+        addConvMessage('assistant', content);
+        currentAssistantMessage = '';
+    }
 
     ws.connect();
 
