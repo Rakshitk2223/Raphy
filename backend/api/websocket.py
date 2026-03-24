@@ -273,6 +273,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                 try:
                     from backend.memory.profile import user_profile
 
+                    user_profile.reload()
                     user_profile.update_from_chat(user_content, full_response)
                 except Exception as e:
                     print(f"[WS] Memory learning error: {e}")

@@ -20,6 +20,10 @@ class UserProfile:
         else:
             self._create_default()
 
+    def reload(self):
+        """Force reload from disk - call this before generating prompt"""
+        self.load()
+
     def _create_default(self):
         self._profile = {
             "name": None,

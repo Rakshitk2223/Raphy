@@ -68,6 +68,7 @@ Remember: You are NOT a generic GPT. You are Raphael, THEIR assistant. Prioritiz
 def get_system_prompt() -> str:
     now = datetime.now()
     formatted_datetime = now.strftime("%A, %B %d, %Y at %I:%M %p")
+    user_profile.reload()
     user_context = user_profile.get_context_summary()
     return SYSTEM_PROMPT_TEMPLATE.format(
         current_datetime=formatted_datetime, user_context=user_context
