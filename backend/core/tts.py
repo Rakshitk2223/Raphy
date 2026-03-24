@@ -50,7 +50,7 @@ SENTENCE_END_PATTERN = re.compile(r"(?<=[.!?])\s+(?=[A-Z\u0900-\u097F])|(?<=[.!?
 
 _playback_lock = asyncio.Lock()
 _stop_requested = False
-_use_edge_tts = True
+_use_edge_tts = settings.tts_backend == "edge"
 
 SPEECH_RATE = 1.0
 

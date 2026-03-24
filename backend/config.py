@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     stt_language: str | None = None
 
     tts_streaming: bool = True
+    tts_backend: Literal["piper", "edge"] = "piper"  # Free offline (piper) or cloud (edge)
 
     data_dir: Path = Path("data")
     models_dir: Path = Path("models")
