@@ -44,9 +44,9 @@
     height: 160px;
     border-radius: 50%;
     background: radial-gradient(circle,
-        rgba(139, 92, 246, 0.15) 0%,
-        rgba(99, 102, 241, 0.08) 40%,
-        rgba(59, 130, 246, 0.03) 60%,
+        rgba(0, 240, 255, 0.15) 0%,
+        rgba(139, 92, 246, 0.08) 40%,
+        rgba(255, 0, 170, 0.03) 60%,
         transparent 70%
     );
     animation: outerGlowPulse 4s ease-in-out infinite;
@@ -74,21 +74,21 @@
             transparent 50%
         ),
         radial-gradient(circle at 70% 70%,
-            rgba(99, 102, 241, 0.8) 0%,
+            rgba(0, 240, 255, 0.8) 0%,
             transparent 50%
         ),
         radial-gradient(circle at center,
-            #c4b5fd 0%,
-            #a78bfa 20%,
+            #80ffff 0%,
+            #00f0ff 20%,
             #8b5cf6 40%,
-            #7c3aed 60%,
-            #6d28d9 80%,
-            #4c1d95 100%
+            #a855f7 60%,
+            #c026d3 80%,
+            #ff00aa 100%
         );
     box-shadow: 
-        0 0 20px rgba(139, 92, 246, 0.8),
-        0 0 40px rgba(124, 58, 237, 0.6),
-        0 0 60px rgba(109, 40, 217, 0.4),
+        0 0 20px rgba(0, 240, 255, 0.8),
+        0 0 40px rgba(139, 92, 246, 0.6),
+        0 0 60px rgba(255, 0, 170, 0.4),
         inset 0 0 15px rgba(255, 255, 255, 0.2);
     animation: corePulse 3s ease-in-out infinite;
     overflow: hidden;
@@ -116,16 +116,16 @@
     0%, 100% {
         transform: scale(1);
         box-shadow: 
-            0 0 20px rgba(139, 92, 246, 0.8),
-            0 0 40px rgba(124, 58, 237, 0.6),
-            0 0 60px rgba(109, 40, 217, 0.4);
+            0 0 20px rgba(0, 240, 255, 0.8),
+            0 0 40px rgba(139, 92, 246, 0.6),
+            0 0 60px rgba(255, 0, 170, 0.4);
     }
     50% {
         transform: scale(1.08);
         box-shadow: 
-            0 0 30px rgba(139, 92, 246, 0.9),
-            0 0 50px rgba(124, 58, 237, 0.7),
-            0 0 80px rgba(109, 40, 217, 0.5);
+            0 0 30px rgba(0, 240, 255, 0.9),
+            0 0 50px rgba(139, 92, 246, 0.7),
+            0 0 80px rgba(255, 0, 170, 0.5);
     }
 }
 
@@ -140,7 +140,7 @@
     width: 70px;
     height: 70px;
     border-width: 1.5px;
-    border-color: rgba(167, 139, 250, 0.5) transparent rgba(139, 92, 246, 0.3) transparent;
+    border-color: rgba(0, 240, 255, 0.5) transparent rgba(139, 92, 246, 0.3) transparent;
     animation-duration: 8s;
 }
 
@@ -148,7 +148,7 @@
     width: 90px;
     height: 90px;
     border-width: 1px;
-    border-color: transparent rgba(124, 58, 237, 0.4) transparent rgba(99, 102, 241, 0.3);
+    border-color: transparent rgba(139, 92, 246, 0.4) transparent rgba(255, 0, 170, 0.3);
     animation-duration: 12s;
     animation-direction: reverse;
 }
@@ -157,7 +157,7 @@
     width: 110px;
     height: 110px;
     border-width: 0.5px;
-    border-color: rgba(139, 92, 246, 0.2) transparent rgba(167, 139, 250, 0.15) transparent;
+    border-color: rgba(0, 240, 255, 0.2) transparent rgba(255, 0, 170, 0.15) transparent;
     animation-duration: 16s;
 }
 
@@ -177,9 +177,9 @@
     position: absolute;
     width: 2px;
     height: 2px;
-    background: rgba(196, 181, 253, 0.9);
+    background: rgba(0, 240, 255, 0.9);
     border-radius: 50%;
-    box-shadow: 0 0 4px rgba(167, 139, 250, 0.6);
+    box-shadow: 0 0 4px rgba(0, 240, 255, 0.6);
     animation: particleOrbit 4s linear infinite;
 }
 
@@ -220,16 +220,16 @@
     0%, 100% {
         transform: scale(1);
         box-shadow: 
-            0 0 25px rgba(139, 92, 246, 0.9),
-            0 0 50px rgba(124, 58, 237, 0.7),
-            0 0 75px rgba(109, 40, 217, 0.5);
+            0 0 25px rgba(0, 240, 255, 0.9),
+            0 0 50px rgba(139, 92, 246, 0.7),
+            0 0 75px rgba(255, 0, 170, 0.5);
     }
     50% {
         transform: scale(1.15);
         box-shadow: 
-            0 0 35px rgba(139, 92, 246, 1),
-            0 0 70px rgba(124, 58, 237, 0.8),
-            0 0 100px rgba(109, 40, 217, 0.6);
+            0 0 35px rgba(0, 240, 255, 1),
+            0 0 70px rgba(139, 92, 246, 0.8),
+            0 0 100px rgba(255, 0, 170, 0.6);
     }
 }
 
@@ -270,7 +270,7 @@
             transparent 50%
         ),
         radial-gradient(circle at 70% 70%,
-            rgba(16, 185, 129, 0.8) 0%,
+            rgba(0, 240, 160, 0.8) 0%,
             transparent 50%
         ),
         radial-gradient(circle at center,
@@ -282,17 +282,17 @@
             #064e3b 100%
         );
     box-shadow: 
-        0 0 20px rgba(16, 185, 129, 0.8),
+        0 0 20px rgba(0, 240, 160, 0.8),
         0 0 40px rgba(5, 150, 105, 0.6),
         0 0 60px rgba(4, 120, 87, 0.4);
 }
 
 .orb.listening .orb-ring-1 {
-    border-color: rgba(110, 231, 183, 0.5) transparent rgba(52, 211, 153, 0.3) transparent;
+    border-color: rgba(0, 240, 160, 0.5) transparent rgba(52, 211, 153, 0.3) transparent;
 }
 
 .orb.listening .orb-ring-2 {
-    border-color: transparent rgba(16, 185, 129, 0.4) transparent rgba(5, 150, 105, 0.3);
+    border-color: transparent rgba(0, 240, 160, 0.4) transparent rgba(5, 150, 105, 0.3);
 }
 
 .orb.listening .orb-ring-3 {
@@ -301,7 +301,7 @@
 
 .orb.listening .orb-outer-glow {
     background: radial-gradient(circle,
-        rgba(16, 185, 129, 0.15) 0%,
+        rgba(0, 240, 160, 0.15) 0%,
         rgba(5, 150, 105, 0.08) 40%,
         rgba(4, 120, 87, 0.03) 60%,
         transparent 70%
@@ -319,7 +319,7 @@
             #7f1d1d 100%
         );
     box-shadow: 
-        0 0 20px rgba(239, 68, 68, 0.8),
+        0 0 20px rgba(255, 51, 102, 0.8),
         0 0 40px rgba(220, 38, 38, 0.6);
     animation: coreError 0.5s ease-in-out infinite;
 }
@@ -347,14 +347,14 @@
     0%, 100% {
         transform: scale(1);
         box-shadow: 
-            0 0 20px rgba(16, 185, 129, 0.8),
+            0 0 20px rgba(0, 240, 160, 0.8),
             0 0 40px rgba(5, 150, 105, 0.6),
             0 0 60px rgba(4, 120, 87, 0.4);
     }
     50% {
         transform: scale(1.1);
         box-shadow: 
-            0 0 30px rgba(16, 185, 129, 1),
+            0 0 30px rgba(0, 240, 160, 1),
             0 0 60px rgba(5, 150, 105, 0.8),
             0 0 90px rgba(4, 120, 87, 0.5);
     }

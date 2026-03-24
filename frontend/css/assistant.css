@@ -1,14 +1,22 @@
 :root {
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #12121a;
-    --text-primary: #e8e8ed;
-    --text-secondary: #a0a0b0;
-    --text-muted: #606070;
-    --accent-primary: #6366f1;
-    --accent-secondary: #818cf8;
-    --success: #22c55e;
-    --error: #ef4444;
-    --border: rgba(255, 255, 255, 0.08);
+    --bg-void: #030308;
+    --bg-deep: #080810;
+    --bg-surface: #0e0e18;
+    --bg-elevated: #161622;
+    --text-primary: #f0f0f5;
+    --text-secondary: #8888a0;
+    --text-muted: #4a4a60;
+    --accent-cyan: #00f0ff;
+    --accent-magenta: #ff00aa;
+    --accent-violet: #8b5cf6;
+    --accent-gradient: linear-gradient(135deg, #00f0ff, #8b5cf6, #ff00aa);
+    --glow-cyan: rgba(0, 240, 255, 0.4);
+    --glow-magenta: rgba(255, 0, 170, 0.3);
+    --glow-violet: rgba(139, 92, 246, 0.3);
+    --border-glass: rgba(255, 255, 255, 0.06);
+    --border-glow: rgba(0, 240, 255, 0.3);
+    --success: #00f0a0;
+    --error: #ff3366;
 }
 
 * {
@@ -18,8 +26,8 @@
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--bg-primary);
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-void);
     color: var(--text-primary);
     min-height: 100vh;
     overflow: hidden;
@@ -29,6 +37,22 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    position: relative;
+}
+
+.app::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 240, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139, 92, 246, 0.04) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 20% 80%, rgba(255, 0, 170, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
 }
 
 .header {
@@ -36,25 +60,28 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-glass);
+    background: var(--bg-surface);
 }
 
 .back-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-secondary);
     text-decoration: none;
     transition: all 0.2s ease;
+    border: 1px solid var(--border-glass);
 }
 
 .back-btn:hover {
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: var(--bg-elevated);
+    color: var(--accent-cyan);
+    border-color: var(--border-glow);
+    box-shadow: 0 0 20px var(--glow-cyan);
 }
 
 .title {
@@ -66,15 +93,16 @@ body {
 }
 
 .logo {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    background: var(--accent-gradient);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 1rem;
+    box-shadow: 0 0 15px var(--glow-cyan);
 }
 
 .status {
@@ -92,11 +120,18 @@ body {
 
 .status-indicator.connected {
     background: var(--success);
-    box-shadow: 0 0 10px var(--success);
+    box-shadow: 0 0 15px var(--success);
 }
 
 .status-indicator.error {
     background: var(--error);
+    box-shadow: 0 0 15px var(--error);
+    animation: errorPulse 1s infinite;
+}
+
+@keyframes errorPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
 }
 
 .main {
@@ -108,65 +143,54 @@ body {
     overflow: hidden;
 }
 
-.main::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.08) 0%, transparent 60%);
-    pointer-events: none;
-}
-
 .orb-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: 2.5rem;
     z-index: 1;
 }
 
 .orb-wrapper {
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: transform 0.3s ease;
 }
 
 .orb-wrapper:hover {
-    transform: scale(1.02);
+    transform: scale(1.03);
 }
 
 .orb-wrapper:active {
-    transform: scale(0.98);
-}
-
-.orb {
-    width: 200px;
-    height: 200px;
+    transform: scale(0.97);
 }
 
 .status-text {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     color: var(--text-secondary);
     text-align: center;
-    min-height: 1.5rem;
+    min-height: 2rem;
     transition: all 0.3s ease;
+    letter-spacing: 0.05em;
 }
 
 .status-text.listening {
     color: var(--success);
+    text-shadow: 0 0 20px var(--success);
 }
 
 .status-text.thinking {
-    color: var(--accent-secondary);
+    color: var(--accent-violet);
+    text-shadow: 0 0 20px var(--glow-violet);
 }
 
 .status-text.speaking {
-    color: var(--accent-primary);
+    color: var(--accent-cyan);
+    text-shadow: 0 0 20px var(--glow-cyan);
 }
 
 .status-text.error {
     color: var(--error);
+    text-shadow: 0 0 20px var(--error);
 }
 
 .footer {
@@ -174,49 +198,60 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
-    border-top: 1px solid var(--border);
-    background: var(--bg-secondary);
+    gap: 1rem;
+    border-top: 1px solid var(--border-glass);
+    background: var(--bg-surface);
 }
 
 .mode-switch {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    border-radius: 10px;
+    gap: 0.625rem;
+    padding: 0.875rem 1.5rem;
+    border-radius: 12px;
     color: var(--text-secondary);
     text-decoration: none;
     transition: all 0.2s ease;
     font-size: 0.9rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-glass);
 }
 
 .mode-switch:hover {
-    border-color: var(--accent-primary);
-    color: var(--accent-secondary);
+    border-color: var(--border-glow);
+    color: var(--accent-cyan);
+    box-shadow: 0 0 20px var(--glow-cyan);
 }
 
 .hint {
     font-size: 0.8rem;
     color: var(--text-muted);
+    letter-spacing: 0.05em;
+}
+
+.hint kbd {
+    background: var(--bg-elevated);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-glass);
+    font-family: inherit;
+    margin: 0 0.25rem;
 }
 
 @media (min-width: 768px) {
     .orb {
-        width: 280px;
-        height: 280px;
+        width: 300px;
+        height: 300px;
     }
     
     .status-text {
-        font-size: 1.25rem;
+        font-size: 1.5rem;
     }
 }
 
 @media (min-width: 1024px) {
     .orb {
-        width: 320px;
-        height: 320px;
+        width: 350px;
+        height: 350px;
     }
 }

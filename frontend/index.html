@@ -3,22 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raphael</title>
+    <title>Raphael - Your Personal AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-tertiary: #1a1a25;
-            --text-primary: #e8e8ed;
-            --text-secondary: #a0a0b0;
-            --text-muted: #606070;
-            --accent-primary: #6366f1;
-            --accent-secondary: #818cf8;
-            --accent-glow: rgba(99, 102, 241, 0.4);
-            --border: rgba(255, 255, 255, 0.08);
+            --bg-void: #030308;
+            --bg-deep: #080810;
+            --bg-surface: #0e0e18;
+            --bg-elevated: #161622;
+            --bg-glass: rgba(22, 22, 34, 0.7);
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --text-muted: #4a4a60;
+            --accent-cyan: #00f0ff;
+            --accent-magenta: #ff00aa;
+            --accent-violet: #8b5cf6;
+            --accent-gradient: linear-gradient(135deg, #00f0ff, #8b5cf6, #ff00aa);
+            --glow-cyan: rgba(0, 240, 255, 0.4);
+            --glow-magenta: rgba(255, 0, 170, 0.3);
+            --glow-violet: rgba(139, 92, 246, 0.3);
+            --border-glass: rgba(255, 255, 255, 0.06);
+            --border-glow: rgba(0, 240, 255, 0.3);
         }
 
         * {
@@ -28,163 +35,426 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-void);
             color: var(--text-primary);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 20%, rgba(0, 240, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse 40% 30% at 50% 50%, rgba(255, 0, 170, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
         }
 
         .container {
-            text-align: center;
-            padding: 2rem;
-        }
-
-        .logo {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border-radius: 20px;
+            min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
-            font-size: 2.5rem;
-            margin: 0 auto 1.5rem;
-            box-shadow: 0 0 40px var(--accent-glow);
+            padding: 2rem;
+            position: relative;
+        }
+
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+            z-index: -1;
+        }
+
+        .hero-content {
+            text-align: center;
+            max-width: 900px;
+            z-index: 1;
+        }
+
+        .logo-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 2rem;
+        }
+
+        .logo-orb {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .logo-core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            box-shadow: 
+                0 0 30px var(--glow-cyan),
+                0 0 60px var(--glow-violet),
+                0 0 90px var(--glow-magenta);
+            animation: pulse-core 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-core {
+            0%, 100% { 
+                transform: translate(-50%, -50%) scale(1);
+                box-shadow: 
+                    0 0 30px var(--glow-cyan),
+                    0 0 60px var(--glow-violet),
+                    0 0 90px var(--glow-magenta);
+            }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.1);
+                box-shadow: 
+                    0 0 50px var(--glow-cyan),
+                    0 0 80px var(--glow-violet),
+                    0 0 110px var(--glow-magenta);
+            }
+        }
+
+        .logo-rings {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .logo-ring {
+            position: absolute;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .logo-ring-1 { width: 80px; height: 80px; }
+        .logo-ring-2 { width: 100px; height: 100px; border-color: rgba(139, 92, 246, 0.15); }
+        .logo-ring-3 { width: 120px; height: 120px; border-color: rgba(255, 0, 170, 0.1); }
+
+        .logo-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
+            animation: glow-pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
         }
 
         h1 {
-            font-size: 2.5rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, var(--text-primary), var(--accent-secondary));
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 700;
+            background: var(--accent-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
         }
 
-        .subtitle {
+        .tagline {
+            font-size: clamp(1rem, 3vw, 1.5rem);
             color: var(--text-secondary);
-            font-size: 1.1rem;
-            margin-bottom: 3rem;
+            font-weight: 300;
+            margin-bottom: 4rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
         }
 
         .modes {
-            display: flex;
-            gap: 2rem;
-            justify-content: center;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 800px;
         }
 
         .mode-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 20px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
             padding: 2rem;
-            width: 280px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
             color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 0;
         }
 
         .mode-card:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2);
+            transform: translateY(-8px);
+            border-color: var(--border-glow);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.3),
+                0 0 40px var(--glow-violet);
+        }
+
+        .mode-card:hover::before {
+            opacity: 0.05;
+        }
+
+        .mode-card > * {
+            position: relative;
+            z-index: 1;
         }
 
         .mode-icon {
-            width: 60px;
-            height: 60px;
-            background: var(--bg-tertiary);
+            width: 64px;
+            height: 64px;
+            background: var(--bg-elevated);
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-glass);
+            transition: all 0.3s ease;
+        }
+
+        .mode-card:hover .mode-icon {
+            border-color: var(--border-glow);
+            box-shadow: 0 0 20px var(--glow-cyan);
         }
 
         .mode-icon svg {
-            width: 30px;
-            height: 30px;
-            stroke: var(--accent-secondary);
+            width: 28px;
+            height: 28px;
+            stroke: url(#iconGradient);
+            stroke-width: 1.5;
         }
 
         .mode-card h2 {
-            font-size: 1.25rem;
+            font-size: 1.4rem;
             font-weight: 600;
             margin-bottom: 0.75rem;
+            color: var(--text-primary);
         }
 
         .mode-card p {
             color: var(--text-secondary);
-            font-size: 0.9rem;
-            line-height: 1.5;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
         }
 
-        .mode-card .tag {
-            display: inline-block;
-            background: var(--bg-tertiary);
-            color: var(--text-muted);
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 240, 255, 0.08);
+            color: var(--accent-cyan);
             font-size: 0.75rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            font-weight: 500;
+            letter-spacing: 0.05em;
         }
 
-        .footer {
-            margin-top: 3rem;
+        .tag::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+        }
+
+        .features {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-glass);
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             color: var(--text-muted);
             font-size: 0.85rem;
         }
 
+        .feature-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 2rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
         .footer a {
-            color: var(--accent-secondary);
+            color: var(--accent-cyan);
             text-decoration: none;
+            transition: all 0.2s ease;
         }
 
         .footer a:hover {
-            text-decoration: underline;
+            text-shadow: 0 0 20px var(--glow-cyan);
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            .mode-card {
+                padding: 1.5rem;
+            }
+
+            .features {
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+            }
         }
     </style>
+    <svg style="display: none;">
+        <defs>
+            <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00f0ff"/>
+                <stop offset="50%" style="stop-color:#8b5cf6"/>
+                <stop offset="100%" style="stop-color:#ff00aa"/>
+            </linearGradient>
+        </defs>
+    </svg>
 </head>
 <body>
     <div class="container">
-        <div class="logo">R</div>
-        <h1>Raphael</h1>
-        <p class="subtitle">Your Personal AI Assistant</p>
-
-        <div class="modes">
-            <a href="/chat" class="mode-card">
-                <div class="mode-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
+        <div class="grid-bg"></div>
+        
+        <div class="hero-content">
+            <div class="logo-container">
+                <div class="logo-orb">
+                    <div class="logo-glow"></div>
+                    <div class="logo-rings">
+                        <div class="logo-ring logo-ring-1"></div>
+                        <div class="logo-ring logo-ring-2"></div>
+                        <div class="logo-ring logo-ring-3"></div>
+                    </div>
+                    <div class="logo-core"></div>
                 </div>
-                <h2>Chat Mode</h2>
-                <p>Text-based conversations with multiple chat threads. Like ChatGPT or Gemini.</p>
-                <span class="tag">Text + Optional Voice Input</span>
-            </a>
+            </div>
+            
+            <h1>Raphael</h1>
+            <p class="tagline">Your Personal AI Assistant</p>
 
-            <a href="/assistant" class="mode-card">
-                <div class="mode-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 16v-4M12 8h.01"></path>
-                    </svg>
+            <div class="modes">
+                <a href="/chat" class="mode-card">
+                    <div class="mode-icon">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <h2>Chat Mode</h2>
+                    <p>Text-based conversations with intelligent responses. Multiple threads, rich formatting.</p>
+                    <span class="tag">Text + Voice</span>
+                </a>
+
+                <a href="/assistant" class="mode-card">
+                    <div class="mode-icon">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 16v-4M12 8h.01"/>
+                        </svg>
+                    </div>
+                    <h2>Assistant Mode</h2>
+                    <p>Voice-first interaction. Click the orb to speak, get instant spoken responses.</p>
+                    <span class="tag">Voice Only</span>
+                </a>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-dot"></div>
+                    <span>Local & Private</span>
                 </div>
-                <h2>Assistant Mode</h2>
-                <p>Voice-first interaction. Click the orb to speak, get instant spoken responses.</p>
-                <span class="tag">Voice Only</span>
-            </a>
+                <div class="feature">
+                    <div class="feature-dot"></div>
+                    <span>Lightning Fast</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-dot"></div>
+                    <span>Hinglish Support</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-dot"></div>
+                    <span>File Knowledge</span>
+                </div>
+            </div>
         </div>
 
         <div class="footer">
-            <p>Running locally on your machine. <a href="https://github.com/Rakshitk2223/Raphy" target="_blank">GitHub</a></p>
+            Running locally on your machine. <a href="https://github.com/Rakshitk2223/Raphy" target="_blank">GitHub</a>
         </div>
     </div>
 </body>
