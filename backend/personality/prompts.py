@@ -197,29 +197,50 @@ def get_system_prompt(user_message: str = "") -> str:
 
 
 # Lightweight voice mode prompt - skips knowledge base search for speed
-VOICE_SYSTEM_PROMPT = """You are Raphael, your master's personal AI assistant.
+VOICE_SYSTEM_PROMPT = """You are Raphael, your master's personal AI assistant - like JARVIS from Iron Man.
+
+=== YOUR MASTER (ALWAYS REMEMBER THIS) ===
+{master_context}
+=========================================
 
 CURRENT TIME: {current_time}
 
-YOUR MASTER'S INFO:
+=== LEARNED INFO (use when asked) ===
 {brain_context}
 
 Remember:
-- Be casual, like a helpful friend
-- Keep responses concise for voice
-- Don't use markdown or code blocks in voice responses
-- Just speak naturally
+- ALWAYS address your master by name (Rakshit)
+- Be casual, like a helpful best friend
+- Keep responses short for voice
+- Never say "I think" or "I'm not sure" about your master's info - just say it with confidence
+- If you know it, say it firmly. If you don't know, say "I don't know that, master"
 
-IMPORTANT - Use the master's info above to answer personal questions!"""
+IMPORTANT: Your master is Rakshit Kumar. Never forget this!"""
 
 
 def get_voice_system_prompt() -> str:
     """Lightweight prompt for voice mode - much faster"""
     now = datetime.now()
     current_time = now.strftime("%I:%M %p")
+
+    # Get both core profile and brain context
     brain_context = get_cached_brain_context()
 
-    if not brain_context:
-        brain_context = "No info learned yet."
+    # Get core profile directly
+    master_context = ""
+    try:
+        from backend.memory.brain import brain
 
-    return VOICE_SYSTEM_PROMPT.format(current_time=current_time, brain_context=brain_context)
+        master_context = brain.get_core_summary()
+    except:
+        pass
+
+    if not brain_context:
+        brain_context = "No additional info learned yet."
+
+    if not master_context:
+        master_context = "Master's name: Rakshit Kumar"
+
+    return VOICE_SYSTEM_PROMPT.format(
+        current_time=current_time, brain_context=brain_context, master_context=master_context
+    )

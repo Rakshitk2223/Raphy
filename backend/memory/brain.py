@@ -456,8 +456,54 @@ class Brain:
         self._data["learned_facts"] = []
         self.save()
 
+    def get_core_profile(self) -> dict:
+        """Load the core profile - this is permanent and never changes"""
+        core_path = self.brain_path.parent / "core_profile.json"
+        if core_path.exists():
+            try:
+                return json.loads(core_path.read_text(encoding="utf-8"))
+            except:
+                pass
+        return {}
+
+    def get_core_summary(self) -> str:
+        """Get core profile as a string for system prompt"""
+        core = self.get_core_profile()
+        if not core:
+            return ""
+
+        parts = []
+
+        master = core.get("master", {})
+        if master:
+            name = master.get("name", "Unknown")
+            nickname = master.get("nickname", "")
+            gaming = master.get("gaming_name", "")
+
+            core_info = f"Master's name: {name}"
+            if nickname:
+                core_info += f" (also goes by {nickname})"
+            if gaming:
+                core_info += f", Gaming name: {gaming}"
+            parts.append(core_info)
+
+        role = core.get("role", {})
+        if role:
+            parts.append(f"Your role: {role.get('title', 'AI Assistant')}")
+
+        important = core.get("important", [])
+        if important:
+            parts.append(f"Always remember: {'; '.join(important[:3])}")
+
+        return " | ".join(parts)
+
     def get_summary(self) -> str:
         parts = []
+
+        # FIRST: Always include core profile (most important!)
+        core_summary = self.get_core_summary()
+        if core_summary:
+            parts.append(f"CORE MEMORY: {core_summary}")
 
         info = self._data.get("info", {})
         if info:

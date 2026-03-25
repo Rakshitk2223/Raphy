@@ -8,6 +8,7 @@ data/memory/notes/
 data/memory/chroma/
 data/memory/profile.json
 data/memory/brain.json
+data/memory/core_profile.json
 data/conversations/
 
 # Python
