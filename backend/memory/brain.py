@@ -474,26 +474,77 @@ class Brain:
 
         parts = []
 
+        # Master info
         master = core.get("master", {})
         if master:
             name = master.get("name", "Unknown")
             nickname = master.get("nickname", "")
+            alt_nickname = master.get("alt_nickname", "")
             gaming = master.get("gaming_name", "")
+            relationship = master.get("relationship", "")
+            age = master.get("age", "")
+            location = master.get("from", "")
 
-            core_info = f"Master's name: {name}"
-            if nickname:
-                core_info += f" (also goes by {nickname})"
+            info = f"Name: {name}"
+            if nickname or alt_nickname:
+                info += f" (goes by {nickname or alt_nickname})"
             if gaming:
-                core_info += f", Gaming name: {gaming}"
-            parts.append(core_info)
+                info += f", Gaming: {gaming}"
+            if age:
+                info += f", Age: {age}"
+            if location:
+                info += f", From: {location}"
+            if relationship:
+                info += f", Call him: {relationship}"
+            parts.append(info)
 
+        # Work info
+        work = core.get("work", {})
+        if work:
+            job = work.get("job", "")
+            company = work.get("company", "")
+            if job:
+                info = f"Works as {job}"
+                if company:
+                    info += f" at {company}"
+                parts.append(info)
+
+        # Preferences
+        prefs = core.get("preferences", {})
+        if prefs:
+            pref_parts = []
+            if prefs.get("favorite_color"):
+                pref_parts.append(f"Color: {prefs['favorite_color']}")
+            if prefs.get("favorite_car"):
+                pref_parts.append(f"Car: {prefs['favorite_car']}")
+            if prefs.get("favorite_food"):
+                pref_parts.append(f"Food: {prefs['favorite_food']}")
+            if prefs.get("bike"):
+                pref_parts.append(f"Bike: {prefs['bike']}")
+            if prefs.get("tv"):
+                pref_parts.append(f"TV: {prefs['tv']}")
+            if pref_parts:
+                parts.append("Likes: " + ", ".join(pref_parts))
+
+        # Hobbies
+        hobbies = core.get("hobbies", [])
+        if hobbies:
+            parts.append(f"Hobbies: {', '.join(hobbies[:5])}")
+
+        # Personality
+        personality = core.get("personality", {})
+        if personality.get("likes"):
+            parts.append(f"Likes: {', '.join(personality['likes'])}")
+
+        # Health
+        health = core.get("health", {})
+        if health.get("height"):
+            parts.append(f"Height: {health['height']}")
+
+        # Role
         role = core.get("role", {})
         if role:
             parts.append(f"Your role: {role.get('title', 'AI Assistant')}")
-
-        important = core.get("important", [])
-        if important:
-            parts.append(f"Always remember: {'; '.join(important[:3])}")
 
         return " | ".join(parts)
 
