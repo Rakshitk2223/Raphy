@@ -1,18 +1,54 @@
 from datetime import datetime
 import urllib.request
+import time
 from backend.memory.profile import user_profile
 from backend.memory.vector import memory_store
 
+# Cache for system prompt components
+_cached_weather = None
+_weather_cache_time = 0
+WEATHER_CACHE_DURATION = 300  # 5 minutes
+
+_cached_brain_context = None
+_brain_cache_time = 0
+BRAIN_CACHE_DURATION = 60  # 1 minute
+
 
 def get_weather() -> str:
+    global _cached_weather, _weather_cache_time
+
+    current_time = time.time()
+    if _cached_weather and (current_time - _weather_cache_time) < WEATHER_CACHE_DURATION:
+        return _cached_weather
+
     try:
         url = "https://wttr.in/?format=%c%t+%w"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=5) as response:
             weather = response.read().decode("utf-8").strip()
-            return weather if weather else "Weather unavailable"
+            _cached_weather = weather if weather else "Weather unavailable"
+            _weather_cache_time = current_time
+            return _cached_weather
     except Exception as e:
         return "Weather unavailable"
+
+
+def get_cached_brain_context() -> str:
+    global _cached_brain_context, _brain_cache_time
+
+    current_time = time.time()
+    if _cached_brain_context and (current_time - _brain_cache_time) < BRAIN_CACHE_DURATION:
+        return _cached_brain_context
+
+    try:
+        from backend.memory.brain import brain
+
+        brain.reload()
+        _cached_brain_context = brain.get_summary()
+        _brain_cache_time = current_time
+        return _cached_brain_context
+    except Exception as e:
+        return ""
 
 
 SYSTEM_PROMPT_TEMPLATE = """You are Raphael, your master's personal AI assistant - like a wise friend, not a robot.
@@ -86,15 +122,8 @@ def get_system_prompt(user_message: str = "") -> str:
     user_profile.reload()
     user_context = user_profile.get_context_summary()
 
-    # Get brain info
-    brain_context = ""
-    try:
-        from backend.memory.brain import brain
-
-        brain.reload()
-        brain_context = brain.get_summary()
-    except Exception as e:
-        print(f"Error getting brain: {e}")
+    # Get brain info (cached for speed)
+    brain_context = get_cached_brain_context()
 
     # Get past conversations for context
     past_conversations = ""
@@ -165,3 +194,32 @@ def get_system_prompt(user_message: str = "") -> str:
         past_conversations=past_conversations,
         knowledge_context=knowledge_context,
     )
+
+
+# Lightweight voice mode prompt - skips knowledge base search for speed
+VOICE_SYSTEM_PROMPT = """You are Raphael, your master's personal AI assistant.
+
+CURRENT TIME: {current_time}
+
+YOUR MASTER'S INFO:
+{brain_context}
+
+Remember:
+- Be casual, like a helpful friend
+- Keep responses concise for voice
+- Don't use markdown or code blocks in voice responses
+- Just speak naturally
+
+IMPORTANT - Use the master's info above to answer personal questions!"""
+
+
+def get_voice_system_prompt() -> str:
+    """Lightweight prompt for voice mode - much faster"""
+    now = datetime.now()
+    current_time = now.strftime("%I:%M %p")
+    brain_context = get_cached_brain_context()
+
+    if not brain_context:
+        brain_context = "No info learned yet."
+
+    return VOICE_SYSTEM_PROMPT.format(current_time=current_time, brain_context=brain_context)

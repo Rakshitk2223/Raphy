@@ -2,7 +2,7 @@ import httpx
 from collections.abc import AsyncIterator
 
 from backend.config import settings
-from backend.personality.prompts import get_system_prompt
+from backend.personality.prompts import get_system_prompt, get_voice_system_prompt
 
 
 class OllamaClient:
@@ -32,17 +32,22 @@ class OllamaClient:
         self,
         messages: list[dict],
         model: str | None = None,
+        voice_mode: bool = False,
     ) -> AsyncIterator[str]:
         model = model or self.model
 
-        # Get the last user message for knowledge base search
-        user_message = ""
-        for msg in reversed(messages):
-            if msg.get("role") == "user":
-                user_message = msg.get("content", "")
-                break
+        # Use lightweight voice prompt for voice mode
+        if voice_mode:
+            system_message = {"role": "system", "content": get_voice_system_prompt()}
+        else:
+            # Get the last user message for knowledge base search
+            user_message = ""
+            for msg in reversed(messages):
+                if msg.get("role") == "user":
+                    user_message = msg.get("content", "")
+                    break
+            system_message = {"role": "system", "content": get_system_prompt(user_message)}
 
-        system_message = {"role": "system", "content": get_system_prompt(user_message)}
         full_messages = [system_message] + messages
 
         payload = {

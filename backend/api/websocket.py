@@ -244,7 +244,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
             )
 
         try:
-            async for chunk in ollama_client.generate_stream(history):
+            voice_mode = client_id.startswith("assistant_")
+            async for chunk in ollama_client.generate_stream(history, voice_mode=voice_mode):
                 if first_token_time is None:
                     first_token_time = time.perf_counter()
                     ttft = first_token_time - llm_start
@@ -305,7 +306,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                     user_profile.update_from_chat(user_content, full_response)
 
                     history = manager.get_history(client_id)
-                    if len(history) >= 2:
+
+                    # Only run brain extraction every 4th message (not every time) for speed
+                    # But still learn from the conversation via update_from_chat above
+                    if len(history) >= 4 and len(history) % 4 == 0:
                         print(f"[WS] Starting brain extraction for history length: {len(history)}")
 
                         async def handle_memory_result():
@@ -321,12 +325,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = "default"):
                                 print(f"[WS] Memory result handling error: {e}")
 
                         asyncio.create_task(handle_memory_result())
-                    else:
-                        print(
-                            f"[WS] Not enough history for brain extraction: {len(history) if history else 0} messages"
-                        )
 
-                    if len(history) >= 6 and len(history) % 6 == 0:
+                    # Save chat summaries less frequently
+                    if len(history) >= 10 and len(history) % 10 == 0:
                         summary_text = f"User asked about: {user_content[:100]}"
                         user_profile.add_chat_summary(summary_text)
                         print(f"[WS] Added chat summary")

@@ -54,21 +54,33 @@ _tts_backend = settings.tts_backend
 
 # Qwen3-TTS model (lazy loaded)
 _qwen_model = None
+_qwen_speaker = None
 _qwen_device = "cuda"
 
 
 def get_qwen_model():
     global _qwen_model
     if _qwen_model is None:
-        print("Loading Qwen3-TTS model...")
-        from qwen_tts.inference.qwen3_tts_model import Qwen3TTSModel
+        print("Loading Qwen3-TTS CustomVoice model...")
+        from qwen_tts import Qwen3TTSModel
         import torch
 
         _qwen_model = Qwen3TTSModel.from_pretrained(
-            "Qwen/Qwen3-TTS-12Hz-0.6B-Base", device_map="auto", torch_dtype=torch.bfloat16
+            "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice", device_map="auto", torch_dtype=torch.bfloat16
         )
-        print("Qwen3-TTS model loaded!")
+        print("Qwen3-TTS CustomVoice model loaded!")
     return _qwen_model
+
+
+def get_qwen_speaker():
+    """Get or create a speaker prompt for Qwen TTS"""
+    global _qwen_speaker
+    if _qwen_speaker is None:
+        model = get_qwen_model()
+        speakers = model.get_supported_speakers()
+        print(f"Available speakers: {speakers}")
+        _qwen_speaker = speakers[0] if speakers else "Chelsie"
+    return _qwen_speaker
 
 
 SPEECH_RATE = 1.0
@@ -236,6 +248,7 @@ async def synthesize_with_qwen(
         import soundfile as sf
 
         model = get_qwen_model()
+        speaker = get_qwen_speaker()
 
         if output_path is None:
             output_path = Path(tempfile.mktemp(suffix=".wav"))
@@ -244,13 +257,9 @@ async def synthesize_with_qwen(
 
         def _synthesize():
             try:
-                if hasattr(model, "generate_voice"):
-                    wavs = model.generate_voice(text)
-                elif hasattr(model, "__call__"):
-                    wavs = model(text)
-                else:
-                    print(f"Qwen TTS: model has no generate_voice or __call__ method")
-                    return None
+                lang = detect_language(text) if not language else language
+
+                wavs = model.generate_custom_voice(text=text, language=lang, speaker=speaker)
 
                 if isinstance(wavs, tuple):
                     wavs, sr = wavs
